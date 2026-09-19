@@ -15,8 +15,7 @@ async function addTag(req, res) {
       .insert([{
         trend_id: trendId,
         action_type: 'tag',
-        tag_name: tag,
-        created_at: new Date().toISOString()
+        content: tag
       }])
       .select();
 
@@ -35,13 +34,13 @@ async function getTags(req, res) {
 
     const { data, error } = await supabase
       .from('team_actions')
-      .select('tag_name')
+      .select('content')
       .eq('trend_id', trendId)
       .eq('action_type', 'tag');
 
     if (error) throw error;
 
-    const tags = (data || []).map(t => t.tag_name);
+    const tags = (data || []).map(t => t.content);
     res.json({ success: true, tags });
   } catch (err) {
     console.error(`[Tags] Get failed: ${err.message}`);
@@ -58,7 +57,7 @@ async function removeTag(req, res) {
       .delete()
       .eq('trend_id', trendId)
       .eq('action_type', 'tag')
-      .eq('tag_name', tag);
+      .eq('content', tag);
 
     if (error) throw error;
 

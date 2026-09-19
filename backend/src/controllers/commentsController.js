@@ -14,10 +14,8 @@ async function addComment(req, res) {
       .insert([{
         trend_id: trendId,
         action_type: 'comment',
-        comment_text: text,
-        author_name: authorName,
-        created_at: new Date().toISOString(),
-        is_deleted: false
+        user_id: authorName,
+        content: text
       }])
       .select();
 
@@ -39,7 +37,6 @@ async function getComments(req, res) {
       .select('*')
       .eq('trend_id', trendId)
       .eq('action_type', 'comment')
-      .eq('is_deleted', false)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -56,7 +53,6 @@ async function deleteComment(req, res) {
     const { trendId, commentId } = req.params;
     const { authorName } = req.body;
 
-    // Verify author owns comment
     const { data: comment, error: fetchErr } = await supabase
       .from('team_actions')
       .select('*')
@@ -68,13 +64,13 @@ async function deleteComment(req, res) {
       return res.status(404).json({ success: false, error: 'Comment not found' });
     }
 
-    if (comment.author_name !== authorName) {
+    if (comment.user_id !== authorName) {
       return res.status(403).json({ success: false, error: 'Can only delete own comments' });
     }
 
     const { error: deleteErr } = await supabase
       .from('team_actions')
-      .update({ is_deleted: true })
+      .delete()
       .eq('id', commentId);
 
     if (deleteErr) throw deleteErr;
