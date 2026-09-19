@@ -1,11 +1,11 @@
 const express = require('express');
-const apiKeyAuth = require('../middleware/apiKeyAuth.js');
+const authMiddleware = require('../middleware/auth.js');
 const { getStatus, triggerRun } = require('../controllers/scraperController.js');
 
 const router = express.Router();
 
-// All scraper admin routes require API key
-router.use(apiKeyAuth);
+// All scraper routes require JWT auth (dashboard internal use)
+router.use(authMiddleware);
 
 // Get scraper status and last runs
 router.get('/status', getStatus);
