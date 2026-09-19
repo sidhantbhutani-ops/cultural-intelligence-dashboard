@@ -1,9 +1,13 @@
 const express = require('express');
+const authMiddleware = require('../middleware/auth');
 const commentsController = require('../controllers/commentsController');
 const tagsController = require('../controllers/tagsController');
 const pickupController = require('../controllers/pickupController');
 
 const router = express.Router();
+
+// All routes require JWT authentication
+router.use(authMiddleware);
 
 // Comments routes
 router.post('/trends/:trendId/comments', commentsController.addComment);
