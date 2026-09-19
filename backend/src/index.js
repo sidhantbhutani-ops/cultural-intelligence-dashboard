@@ -10,6 +10,7 @@ const errorHandler = require('./middleware/errorHandler');
 const trendsRouter = require('./routes/trends');
 const adminRouter = require('./routes/admin');
 const scraperRouter = require('./routes/scraper');
+const collaborationRouter = require('./routes/collaborationRoutes');
 
 const app = express();
 
@@ -30,6 +31,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/trends', trendsRouter);
 app.use('/api/scraper', scraperRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api', collaborationRouter);
 
 // 404 Handler
 app.use((req, res) => {
@@ -41,7 +43,7 @@ app.use((req, res) => {
   });
 });
 
-// Error Handler (must be last)
+// Error Handler
 app.use(errorHandler);
 
 // Start Server
