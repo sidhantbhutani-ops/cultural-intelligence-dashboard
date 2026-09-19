@@ -1,4 +1,4 @@
-const { query } = require('../config/database');
+const { query } = require('../config/supabase');
 
 async function createTrend(trendData) {
   const {

@@ -1,5 +1,5 @@
 const Anthropic = require('@anthropic-ai/sdk');
-const { query } = require('../config/database.js');
+const { query } = require('../config/supabase.js');
 
 const client = new Anthropic();
 

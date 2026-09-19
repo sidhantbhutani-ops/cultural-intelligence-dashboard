@@ -1,4 +1,4 @@
-const db = require('../config/database');
+const db = require('../config/supabase');
 
 async function createAction(req, res, next) {
   try {

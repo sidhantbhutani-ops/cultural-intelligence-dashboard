@@ -1,4 +1,4 @@
-const { query } = require('../config/database.js');
+const { query } = require('../config/supabase.js');
 const { v4: uuidv4 } = require('uuid');
 const runScraper = require('../scraper/index.js');
 
