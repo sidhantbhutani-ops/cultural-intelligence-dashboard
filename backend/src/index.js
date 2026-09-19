@@ -7,6 +7,7 @@ const loggerMiddleware = require('./middleware/logger');
 const errorHandler = require('./middleware/errorHandler');
 
 // Routes
+const authRouter = require('./routes/auth');
 const trendsRouter = require('./routes/trends');
 const adminRouter = require('./routes/admin');
 const scraperRouter = require('./routes/scraper');
@@ -28,6 +29,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // API Routes
+app.use('/api/auth', authRouter);
 app.use('/api/trends', trendsRouter);
 app.use('/api/scraper', scraperRouter);
 app.use('/api/admin', adminRouter);
