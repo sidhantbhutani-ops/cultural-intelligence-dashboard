@@ -43,8 +43,8 @@ export const Login = () => {
   };
 
   const handleDemo = () => {
-    setEmail('demo@broadway.trends');
-    setPassword('demo123');
+    setEmail('demo@broadway.com');
+    setPassword('demo-password-123');
   };
 
   return (
