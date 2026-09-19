@@ -8,6 +8,7 @@ export const ScraperStatus = () => {
   const [runs, setRuns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [triggering, setTriggering] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchStatus();
@@ -15,12 +16,16 @@ export const ScraperStatus = () => {
 
   const fetchStatus = async () => {
     setLoading(true);
+    setError(null);
     try {
+      console.log('Fetching scraper status...');
       const data = await getScraperStatus();
+      console.log('Scraper status data:', data);
       setRuns(data.lastRuns || []);
     } catch (error) {
+      console.error('Error fetching scraper status:', error);
+      setError(error.message || 'Failed to load scraper status');
       Toast.error('Failed to load scraper status');
-      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -66,6 +71,22 @@ export const ScraperStatus = () => {
         return <span className={`${baseClass} bg-gray-100 text-gray-700`}>{status}</span>;
     }
   };
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="bg-red-50 rounded-lg p-6 border border-red-200">
+            <h2 className="text-18 font-bold text-red-900 mb-2">Error Loading Scraper Status</h2>
+            <p className="text-14 text-red-700 mb-4">{error}</p>
+            <Button onClick={fetchStatus} variant="primary" size="md">
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
