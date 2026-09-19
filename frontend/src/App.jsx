@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Login } from './pages/Login';
 import { ActiveTrends } from './pages/ActiveTrends';
+import { ScraperStatus } from './pages/ScraperStatus';
 import { Nav } from './components/Nav';
 import { ToastContainer } from './components/Toast';
 import { getToken } from './api';
@@ -32,6 +33,17 @@ export default function App() {
                 <div className="max-w-7xl mx-auto px-8 py-12">
                   <ActiveTrends />
                 </div>
+              </div>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/scraper-status" 
+          element={
+            <ProtectedRoute>
+              <div className="min-h-screen bg-gray-50">
+                <Nav user={user} />
+                <ScraperStatus />
               </div>
             </ProtectedRoute>
           } 
