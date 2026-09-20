@@ -35,6 +35,7 @@ export const ScraperStatus = () => {
   const [scraperRunning, setScraperRunning] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [triggerTime, setTriggerTime] = useState(null);
+  const [runIdTracking, setRunIdTracking] = useState(null);
 
   const loadStatus = async () => {
     try {
@@ -45,19 +46,19 @@ export const ScraperStatus = () => {
       setRuns(newRuns);
       setLastRefresh(new Date());
 
-      // Detect if a new run appeared since we triggered
-      if (scraperRunning && triggerTime && newRuns.length > 0) {
-        const latestRun = newRuns[0];
-        const latestStartTime = new Date(latestRun.startedAt);
+      // Detect if the run we triggered has completed
+      if (scraperRunning && runIdTracking && newRuns.length > 0) {
+        const trackedRun = newRuns.find(run => run.runId === runIdTracking);
         
-        // If latest run started AFTER we clicked trigger, it's our run
-        if (latestStartTime >= triggerTime) {
+        if (trackedRun && trackedRun.status === 'completed') {
           // Run is done, clear the progress bar
           setScraperRunning(false);
           setElapsedSeconds(0);
           setTriggerTime(null);
+          setRunIdTracking(null);
           localStorage.removeItem('scraperTriggerTime');
-          Toast.success(`Scraper completed: ${latestRun.trendsCreated} created, ${latestRun.trendsSkipped} skipped`);
+          localStorage.removeItem('scraperRunId');
+          Toast.success(`Scraper completed: ${trackedRun.trendsCreated} created, ${trackedRun.trendsSkipped} skipped`);
         }
       }
     } catch (error) {
@@ -70,7 +71,9 @@ export const ScraperStatus = () => {
   // Initialize from localStorage
   useEffect(() => {
     const savedTriggerTime = localStorage.getItem('scraperTriggerTime');
-    if (savedTriggerTime) {
+    const savedRunId = localStorage.getItem('scraperRunId');
+    
+    if (savedTriggerTime && savedRunId) {
       const triggerTimeObj = new Date(savedTriggerTime);
       const now = new Date();
       const secondsElapsed = Math.floor((now - triggerTimeObj) / 1000);
@@ -78,24 +81,47 @@ export const ScraperStatus = () => {
       // Only restore if triggered within last 10 minutes
       if (secondsElapsed < 600) {
         setTriggerTime(triggerTimeObj);
+        setRunIdTracking(savedRunId);
         setScraperRunning(true);
         setElapsedSeconds(secondsElapsed);
       } else {
         localStorage.removeItem('scraperTriggerTime');
+        localStorage.removeItem('scraperRunId');
       }
     }
 
     loadStatus();
-    const interval = setInterval(loadStatus, 10000);
-    return () => clearInterval(interval);
   }, []);
+
+  // Poll status — faster when running, slower when idle
+  useEffect(() => {
+    const pollInterval = scraperRunning ? 3000 : 10000; // 3s when running, 10s when idle
+    const interval = setInterval(loadStatus, pollInterval);
+    return () => clearInterval(interval);
+  }, [scraperRunning, runIdTracking]);
 
   // Track elapsed time while scraper is running
   useEffect(() => {
     if (!scraperRunning) return;
 
     const interval = setInterval(() => {
-      setElapsedSeconds(prev => prev + 1);
+      setElapsedSeconds(prev => {
+        const newSeconds = prev + 1;
+        
+        // Timeout after 5 minutes (300 seconds) — clear if no response
+        if (newSeconds > 300) {
+          console.warn('Scraper run timeout — clearing progress bar');
+          setScraperRunning(false);
+          setTriggerTime(null);
+          setRunIdTracking(null);
+          localStorage.removeItem('scraperTriggerTime');
+          localStorage.removeItem('scraperRunId');
+          Toast.warning('Scraper timeout — please refresh to check status');
+          return 0;
+        }
+        
+        return newSeconds;
+      });
     }, 1000);
 
     return () => clearInterval(interval);
@@ -105,12 +131,16 @@ export const ScraperStatus = () => {
     try {
       setTriggering(true);
       const now = new Date();
+      const runId = `run-${Date.now()}`; // Generate a temp run ID for tracking
+      
       setTriggerTime(now);
+      setRunIdTracking(runId);
       setScraperRunning(true);
       setElapsedSeconds(0);
       
-      // Save trigger time to localStorage
+      // Save to localStorage
       localStorage.setItem('scraperTriggerTime', now.toISOString());
+      localStorage.setItem('scraperRunId', runId);
       
       await triggerScraper();
       Toast.success('Scraper job triggered');
@@ -121,7 +151,10 @@ export const ScraperStatus = () => {
       console.error('Failed to trigger scraper:', error);
       Toast.error('Failed to trigger scraper');
       setScraperRunning(false);
+      setTriggerTime(null);
+      setRunIdTracking(null);
       localStorage.removeItem('scraperTriggerTime');
+      localStorage.removeItem('scraperRunId');
     } finally {
       setTriggering(false);
     }
