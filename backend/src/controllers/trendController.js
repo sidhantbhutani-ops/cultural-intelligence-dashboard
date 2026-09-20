@@ -4,15 +4,9 @@ async function getTrends(req, res, next) {
   try {
     const { status = 'active', category, source, sort = 'latest', limit = 10, offset = 0, search } = req.query;
 
-    let queryText = 'SELECT * FROM trends WHERE 1=1';
+    let queryText = 'SELECT * FROM trends WHERE archived_at IS NULL';
     let params = [];
     let paramCount = 1;
-
-    if (status === 'active') {
-      queryText += ' AND archived_at IS NULL';
-    } else if (status === 'archived') {
-      queryText += ' AND archived_at IS NOT NULL';
-    }
 
     if (category) {
       const categories = category.split(',');
@@ -48,8 +42,8 @@ async function getTrends(req, res, next) {
     const result = await db.query(queryText, params);
     const trends = result.rows;
 
-    const countResult = await db.query('SELECT COUNT(*) FROM trends WHERE archived_at IS NULL');
-    const total = parseInt(countResult.rows[0].count);
+    const countResult = await db.query('SELECT COUNT(*) as count FROM trends WHERE archived_at IS NULL');
+    const total = countResult.rows[0] ? parseInt(countResult.rows[0].count) : 0;
 
     res.json({
       status: 'success',
@@ -138,8 +132,8 @@ async function getArchive(req, res, next) {
     const result = await db.query(queryText, params);
     const trends = result.rows;
 
-    const countResult = await db.query('SELECT COUNT(*) FROM trends WHERE archived_at IS NOT NULL');
-    const total = parseInt(countResult.rows[0].count);
+    const countResult = await db.query('SELECT COUNT(*) as count FROM trends WHERE archived_at IS NOT NULL');
+    const total = countResult.rows[0] ? parseInt(countResult.rows[0].count) : 0;
 
     res.json({
       status: 'success',
