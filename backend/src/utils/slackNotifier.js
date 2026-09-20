@@ -21,7 +21,7 @@ const sendSlackMessage = (channel, blocks) => {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json; charset=utf-8',
         'Content-Length': data.length,
       },
     };
