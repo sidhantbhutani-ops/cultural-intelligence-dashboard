@@ -11,6 +11,8 @@ async function analyzeContent(items) {
       .map((item, i) => `${i + 1}. Title: ${item.title}\nSource: ${item.source}\nURL: ${item.url}\nSummary: ${item.description || 'N/A'}`)
       .join('\n\n');
 
+    console.log(`[Analyzer] Sending ${items.length} items to Claude for analysis`);
+
     const response = await client.messages.create({
       model: 'claude-3-5-haiku-20241022',
       max_tokens: 4000,
@@ -41,11 +43,13 @@ ${itemsText}`
     });
 
     const content = response.content[0].type === 'text' ? response.content[0].text : '';
+    console.log(`[Analyzer] Claude response length: ${content.length}, first 300 chars: ${content.substring(0, 300)}`);
     
     // Extract JSON from response
     const jsonMatch = content.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
       console.warn('[Analyzer] No valid JSON found in Claude response');
+      console.log('[Analyzer] Full response:', content);
       return [];
     }
 
@@ -54,64 +58,9 @@ ${itemsText}`
     return trends;
   } catch (err) {
     console.error(`[Analyzer] Failed to analyze content: ${err.message}`);
+    console.error('[Analyzer] Full error:', err);
     return [];
   }
 }
 
-async function storeAnalyzedTrends(trends) {
-  const stored = [];
-  const scoringPromises = [];
-
-  for (const trend of trends) {
-    try {
-      const trendId = uuidv4();
-      
-      await query(
-        `INSERT INTO trends 
-         (id, title, description, source, source_url, engagement_metric, happening, cultural_significance, angles, category, velocity, picked_up, created_at, source_count, signal_strength, source_names)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), $13, $14, $15)`,
-        [
-          trendId,
-          trend.title,
-          trend.description,
-          trend.source,
-          trend.source_url,
-          trend.engagement_metric || 0,
-          null,
-          trend.cultural_significance,
-          trend.angles || [],
-          trend.category,
-          trend.velocity,
-          false,
-          trend.source_count || 1,
-          trend.signal_strength || 3,
-          trend.source_names || [trend.source]
-        ]
-      );
-
-      stored.push(trendId);
-      console.log(`[Analyzer] Stored trend: "${trend.title}" (signal: ${trend.signal_strength})`);
-
-      // Score the trend asynchronously (non-blocking)
-      scoringPromises.push(
-        scoreTrendWithRAD(trendId, trend).catch(err => 
-          console.error(`[Analyzer] Scoring failed for trend ${trendId}: ${err.message}`)
-        )
-      );
-    } catch (err) {
-      console.error(`[Analyzer] Failed to store trend "${trend.title}": ${err.message}`);
-    }
-  }
-
-  // Fire all scoring requests in parallel without blocking the scraper
-  Promise.all(scoringPromises).catch(err => 
-    console.error(`[Analyzer] Batch scoring error: ${err.message}`)
-  );
-
-  return stored;
-}
-
-module.exports = {
-  analyzeContent,
-  storeAnalyzedTrends
-};
+module.exports = { analyzeContent };
