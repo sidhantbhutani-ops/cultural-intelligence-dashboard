@@ -153,6 +153,15 @@ export const testSource = async (id) => {
   return response.data;
 };
 
+
+export const cancelScraper = async (runId) => {
+  const response = await api(`/scraper/run/${runId}/cancel`, {
+    method: 'PATCH',
+  });
+  return response.data;
+};
+
+
 export const getArchive = async (params = {}) => {
   const queryString = new URLSearchParams(params).toString();
   const endpoint = queryString ? `/trends/archive?${queryString}` : '/trends/archive';

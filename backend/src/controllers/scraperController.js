@@ -74,7 +74,40 @@ async function triggerRun(req, res) {
   }
 }
 
+
+async function cancelRun(req, res) {
+  try {
+    const { runId } = req.params;
+    
+    if (!runId) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'runId is required',
+      });
+    }
+    
+    const { markForCancellation } = require('../utils/scraperCancellation.js');
+    markForCancellation(runId);
+    
+    res.json({
+      status: 'success',
+      data: {
+        runId,
+        message: 'Scraper run marked for cancellation',
+      },
+    });
+  } catch (err) {
+    console.error('[Admin] Cancel run failed:', err.message);
+    res.status(500).json({
+      status: 'error',
+      message: err.message,
+    });
+  }
+}
+
+
 module.exports = {
   getStatus,
   triggerRun,
+  cancelRun,
 };

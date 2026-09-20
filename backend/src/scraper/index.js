@@ -189,4 +189,6 @@ class ScraperOrchestrator {
   }
 }
 
-module.exports = new ScraperOrchestrator();
+module.exports = new ScraperOrchestrator();const { isCancelled, clearCancellation } = require('../utils/scraperCancellation.js');
+
+

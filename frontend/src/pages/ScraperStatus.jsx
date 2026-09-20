@@ -3,7 +3,7 @@ import { Button } from '../components/Button';
 import { Toast } from '../components/Toast';
 import { Spinner } from '../components/Spinner';
 import { Progress } from '../components/Progress';
-import { getScraperStatus, triggerScraper } from '../api';
+import { getScraperStatus, triggerScraper, cancelScraper } from '../api';
 
 // Format timestamp to IST with 12-hour AM/PM format
 const formatIST = (dateString) => {
@@ -31,6 +31,7 @@ export const ScraperStatus = () => {
   const [runs, setRuns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [triggering, setTriggering] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [scraperRunning, setScraperRunning] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -46,19 +47,24 @@ export const ScraperStatus = () => {
       setRuns(newRuns);
       setLastRefresh(new Date());
 
-      // Detect if the run we triggered has completed
+      // Detect if the run we triggered has completed or been cancelled
       if (scraperRunning && runIdTracking && newRuns.length > 0) {
         const trackedRun = newRuns.find(run => run.runId === runIdTracking);
         
-        if (trackedRun && trackedRun.status === 'completed') {
-          // Run is done, clear the progress bar
+        if (trackedRun && (trackedRun.status === 'completed' || trackedRun.status === 'cancelled')) {
+          // Run is done or cancelled, clear the progress bar
           setScraperRunning(false);
           setElapsedSeconds(0);
           setTriggerTime(null);
           setRunIdTracking(null);
           localStorage.removeItem('scraperTriggerTime');
           localStorage.removeItem('scraperRunId');
-          Toast.success(`Scraper completed: ${trackedRun.trendsCreated} created, ${trackedRun.trendsSkipped} skipped`);
+          
+          if (trackedRun.status === 'cancelled') {
+            Toast.success('Scraper run cancelled');
+          } else {
+            Toast.success(`Scraper completed: ${trackedRun.trendsCreated} created, ${trackedRun.trendsSkipped} skipped`);
+          }
         }
       }
     } catch (error) {
@@ -166,6 +172,24 @@ export const ScraperStatus = () => {
     }
   };
 
+  const handleCancel = async () => {
+    if (!runIdTracking) return;
+    
+    try {
+      setCancelling(true);
+      await cancelScraper(runIdTracking);
+      Toast.success('Scraper stop requested');
+      
+      // Refresh immediately to catch the status change
+      setTimeout(loadStatus, 500);
+    } catch (error) {
+      console.error('Failed to cancel scraper:', error);
+      Toast.error('Failed to cancel scraper');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -187,14 +211,26 @@ export const ScraperStatus = () => {
               <h1 className="text-28 font-bold text-gray-900">Scraper Status</h1>
               <p className="text-14 text-gray-600 mt-2">Monitor scraper runs and trigger manual jobs</p>
             </div>
-            <Button 
-              onClick={handleTrigger} 
-              variant="primary" 
-              disabled={triggering || scraperRunning}
-              className="whitespace-nowrap"
-            >
-              {triggering ? 'Starting...' : scraperRunning ? 'Running...' : 'Run Scraper Now'}
-            </Button>
+            <div className="flex gap-3">
+              {scraperRunning && (
+                <Button 
+                  onClick={handleCancel}
+                  variant="danger"
+                  disabled={cancelling}
+                  className="whitespace-nowrap"
+                >
+                  {cancelling ? 'Stopping...' : 'Stop Scraper'}
+                </Button>
+              )}
+              <Button 
+                onClick={handleTrigger} 
+                variant="primary" 
+                disabled={triggering || scraperRunning}
+                className="whitespace-nowrap"
+              >
+                {triggering ? 'Starting...' : scraperRunning ? 'Running...' : 'Run Scraper Now'}
+              </Button>
+            </div>
           </div>
 
           {/* Status Cards */}
@@ -246,10 +282,12 @@ export const ScraperStatus = () => {
                             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-12 font-semibold ${
                               run.status === 'completed'
                                 ? 'bg-green-100 text-green-800'
+                                : run.status === 'cancelled'
+                                ? 'bg-orange-100 text-orange-800'
                                 : 'bg-red-100 text-red-800'
                             }`}
                           >
-                            {run.status === 'completed' ? '✓' : '✗'} {run.status}
+                            {run.status === 'completed' ? '✓' : run.status === 'cancelled' ? '⊘' : '✗'} {run.status}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-13 text-gray-700 font-mono">{formatIST(run.startedAt)}</td>
