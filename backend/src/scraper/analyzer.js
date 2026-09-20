@@ -12,7 +12,7 @@ async function analyzeContent(items) {
       .join('\n\n');
 
     const response = await client.messages.create({
-      model: 'claude-sonnet-5',
+      model: 'claude-3-5-haiku-20241022',
       max_tokens: 4000,
       messages: [
         {
