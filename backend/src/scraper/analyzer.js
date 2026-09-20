@@ -63,4 +63,39 @@ ${itemsText}`
   }
 }
 
-module.exports = { analyzeContent };
+
+
+async function storeAnalyzedTrends(trends) {
+  try {
+    const trendIds = [];
+    for (const trend of trends) {
+      const trendId = uuidv4();
+      await query(
+        `INSERT INTO trends (id, title, description, source, source_url, category, velocity, engagement_metric, cultural_significance, angles, cluster_id, created_at) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        [
+          trendId,
+          trend.title,
+          trend.description,
+          trend.source,
+          trend.source_url,
+          trend.category,
+          trend.velocity,
+          trend.engagement_metric,
+          trend.cultural_significance,
+          JSON.stringify(trend.angles),
+          trend.cluster_id,
+          new Date().toISOString()
+        ]
+      );
+      trendIds.push(trendId);
+    }
+    console.log(`[Analyzer] Stored ${trendIds.length} trends to database`);
+    return trendIds;
+  } catch (err) {
+    console.error(`[Analyzer] Failed to store trends: ${err.message}`);
+    throw err;
+  }
+}
+
+module.exports = { analyzeContent, storeAnalyzedTrends };
