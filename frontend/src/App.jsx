@@ -4,6 +4,7 @@ import { Login } from './pages/Login';
 import { ActiveTrends } from './pages/ActiveTrends';
 import { Archive } from './pages/Archive';
 import { ScraperStatus } from './pages/ScraperStatus';
+import { Sources } from './pages/Sources';
 import { Nav } from './components/Nav';
 import { ToastContainer } from './components/Toast';
 import { getToken } from './api';
@@ -58,6 +59,17 @@ export default function App() {
               <div className="min-h-screen bg-gray-50">
                 <Nav user={user} />
                 <ScraperStatus />
+              </div>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/sources" 
+          element={
+            <ProtectedRoute>
+              <div className="min-h-screen bg-gray-50">
+                <Nav user={user} />
+                <Sources />
               </div>
             </ProtectedRoute>
           } 
