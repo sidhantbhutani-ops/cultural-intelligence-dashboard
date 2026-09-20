@@ -21,7 +21,7 @@ async function analyzeContent(items) {
           role: 'user',
           content: `You are a cultural trends analyst for Broadway, India's curated multi-brand experiential retail destination. Analyze these articles and extract the most significant pop culture and consumer culture trends.
 
-IMPORTANT: Return ONLY valid JSON with properly escaped strings (use \\\" for quotes inside text). No markdown, no code fences, no extra text.
+IMPORTANT: Return ONLY valid JSON with properly escaped strings. No markdown, no code fences, no extra text.
 
 Use this exact structure:
 [
@@ -47,10 +47,8 @@ ${itemsText}`
     let content = response.content[0].type === 'text' ? response.content[0].text : '';
     console.log(`[Analyzer] Claude response length: ${content.length}`);
     
-    // Remove markdown code fence
     content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     
-    // Try to parse as-is first
     let trends = [];
     try {
       trends = JSON.parse(content);
@@ -59,7 +57,6 @@ ${itemsText}`
     } catch (parseErr) {
       console.warn(`[Analyzer] JSON parse failed: ${parseErr.message}`);
       
-      // Fallback: try to extract just the array
       const jsonMatch = content.match(/\[[\s\S]*\]/);
       if (!jsonMatch) {
         console.error('[Analyzer] No JSON array found in response');
