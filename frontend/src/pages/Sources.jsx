@@ -6,6 +6,33 @@ import { Toast } from '../components/Toast';
 import { Spinner } from '../components/Spinner';
 import { getSources, addSource, updateSource, deleteSource, testSource } from '../api';
 
+const getSourceStatus = (source) => {
+  if (!source.is_active) return { status: 'red', label: 'Inactive' };
+  if (source.consecutive_failures >= 3) return { status: 'red', label: 'Failed' };
+  if (source.consecutive_failures > 0) return { status: 'orange', label: 'Issues' };
+  if (!source.last_successful_fetch) return { status: 'orange', label: 'No Data' };
+  
+  const lastFetch = new Date(source.last_successful_fetch);
+  const now = new Date();
+  const daysSince = (now - lastFetch) / (1000 * 60 * 60 * 24);
+  
+  if (daysSince > 7) return { status: 'orange', label: 'Stale' };
+  return { status: 'green', label: 'Healthy' };
+};
+
+const StatusDot = ({ status }) => {
+  const colors = {
+    red: 'bg-red-500',
+    orange: 'bg-yellow-500',
+    green: 'bg-green-500',
+  };
+  return (
+    <div className="flex items-center gap-2">
+      <div className={`w-3 h-3 rounded-full ${colors[status]}`}></div>
+    </div>
+  );
+};
+
 export const Sources = () => {
   const [sources, setSources] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -113,6 +140,7 @@ export const Sources = () => {
       setTesting(prev => ({ ...prev, [sourceId]: true }));
       const result = await testSource(sourceId);
       Toast.success(result.message || 'Test successful');
+      loadSources();
     } catch (error) {
       Toast.error(error.message || 'Test failed');
     } finally {
@@ -143,9 +171,9 @@ export const Sources = () => {
             <table className="w-full">
               <thead className="bg-gray-100 border-b border-gray-200">
                 <tr>
+                  <th className="px-6 py-4 text-left text-13 font-semibold text-gray-900">Status</th>
                   <th className="px-6 py-4 text-left text-13 font-semibold text-gray-900">Name</th>
                   <th className="px-6 py-4 text-left text-13 font-semibold text-gray-900">Type</th>
-                  <th className="px-6 py-4 text-left text-13 font-semibold text-gray-900">Active</th>
                   <th className="px-6 py-4 text-left text-13 font-semibold text-gray-900">Priority</th>
                   <th className="px-6 py-4 text-left text-13 font-semibold text-gray-900">Last Fetch</th>
                   <th className="px-6 py-4 text-left text-13 font-semibold text-gray-900">Failures</th>
@@ -153,27 +181,31 @@ export const Sources = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {sources.map(source => (
-                  <tr key={source.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-13 text-gray-900 font-medium">{source.name}</td>
-                    <td className="px-6 py-4 text-13 text-gray-700">{source.source_type}</td>
-                    <td className="px-6 py-4 text-13">
-                      <span className={`px-3 py-1 rounded-full text-12 font-semibold ${source.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-                        {source.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-13 text-gray-700">{source.priority || '-'}</td>
-                    <td className="px-6 py-4 text-13 text-gray-700">{source.last_successful_fetch ? new Date(source.last_successful_fetch).toLocaleDateString() : 'Never'}</td>
-                    <td className="px-6 py-4 text-13 text-gray-700">{source.consecutive_failures || 0}</td>
-                    <td className="px-6 py-4 text-13 space-x-2">
-                      <button onClick={() => handleTest(source.id)} disabled={testing[source.id]} className="text-blue-600 hover:text-blue-700 font-semibold disabled:opacity-50">
-                        {testing[source.id] ? 'Testing...' : 'Test'}
-                      </button>
-                      <button onClick={() => handleEdit(source)} className="text-blue-600 hover:text-blue-700 font-semibold">Edit</button>
-                      <button onClick={() => handleDelete(source)} className="text-red-600 hover:text-red-700 font-semibold">Delete</button>
-                    </td>
-                  </tr>
-                ))}
+                {sources.map(source => {
+                  const statusInfo = getSourceStatus(source);
+                  return (
+                    <tr key={source.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 text-13">
+                        <div className="flex items-center gap-2">
+                          <StatusDot status={statusInfo.status} />
+                          <span className="text-12 font-semibold text-gray-700">{statusInfo.label}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-13 text-gray-900 font-medium">{source.name}</td>
+                      <td className="px-6 py-4 text-13 text-gray-700">{source.source_type}</td>
+                      <td className="px-6 py-4 text-13 text-gray-700">{source.priority || '-'}</td>
+                      <td className="px-6 py-4 text-13 text-gray-700">{source.last_successful_fetch ? new Date(source.last_successful_fetch).toLocaleDateString() : 'Never'}</td>
+                      <td className="px-6 py-4 text-13 text-gray-700">{source.consecutive_failures || 0}</td>
+                      <td className="px-6 py-4 text-13 space-x-2">
+                        <button onClick={() => handleTest(source.id)} disabled={testing[source.id]} className="text-blue-600 hover:text-blue-700 font-semibold disabled:opacity-50">
+                          {testing[source.id] ? 'Testing...' : 'Test'}
+                        </button>
+                        <button onClick={() => handleEdit(source)} className="text-blue-600 hover:text-blue-700 font-semibold">Edit</button>
+                        <button onClick={() => handleDelete(source)} className="text-red-600 hover:text-red-700 font-semibold">Delete</button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -182,6 +214,12 @@ export const Sources = () => {
               <p className="text-14 text-gray-600">No sources found</p>
             </div>
           )}
+        </div>
+
+        <div className="mt-6 bg-blue-50 p-4 rounded-lg">
+          <p className="text-13 text-gray-700">
+            <strong>Status legend:</strong> 🟢 Healthy (active, no failures, recently fetched) | 🟠 Issues (inactive, has failures, or stale data) | 🔴 Failed (3+ consecutive failures)
+          </p>
         </div>
       </div>
 
