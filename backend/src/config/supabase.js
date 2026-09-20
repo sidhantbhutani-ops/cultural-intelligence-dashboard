@@ -38,6 +38,23 @@ async function handleSelect(sql, params) {
   
   if (!table) throw new Error('Could not determine table from SELECT');
   
+  // Special handling for COUNT queries
+  if (sql.toUpperCase().includes('COUNT(*)')) {
+    let qb = supabase.from(table).select('*', { count: 'exact' });
+    
+    const whereMatch = sql.match(/WHERE\s+(.*?)(?:ORDER|LIMIT|RETURNING|$)/i);
+    if (whereMatch) {
+      const whereClause = whereMatch[1].trim();
+      qb = applyWhereConditions(qb, whereClause, params);
+    }
+    
+    const { data, error, count } = await qb;
+    if (error) throw error;
+    
+    // Return count in expected format
+    return { rows: [{ count }] };
+  }
+  
   let qb = supabase.from(table).select('*');
   
   const whereMatch = sql.match(/WHERE\s+(.*?)(?:ORDER|LIMIT|RETURNING|$)/i);
