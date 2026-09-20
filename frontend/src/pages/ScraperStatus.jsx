@@ -131,22 +131,28 @@ export const ScraperStatus = () => {
     try {
       setTriggering(true);
       const now = new Date();
-      const runId = `run-${Date.now()}`; // Generate a temp run ID for tracking
       
+      // Trigger scraper and get the actual run ID from the backend
+      const response = await triggerScraper();
+      const actualRunId = response?.runId || response?.data?.runId;
+      
+      if (!actualRunId) {
+        throw new Error('Backend did not return run ID');
+      }
+
       setTriggerTime(now);
-      setRunIdTracking(runId);
+      setRunIdTracking(actualRunId);
       setScraperRunning(true);
       setElapsedSeconds(0);
       
       // Save to localStorage
       localStorage.setItem('scraperTriggerTime', now.toISOString());
-      localStorage.setItem('scraperRunId', runId);
+      localStorage.setItem('scraperRunId', actualRunId);
       
-      await triggerScraper();
       Toast.success('Scraper job triggered');
       
       // Refresh immediately
-      setTimeout(loadStatus, 1000);
+      setTimeout(loadStatus, 500);
     } catch (error) {
       console.error('Failed to trigger scraper:', error);
       Toast.error('Failed to trigger scraper');
