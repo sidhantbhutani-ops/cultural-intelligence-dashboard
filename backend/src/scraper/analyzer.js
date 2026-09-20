@@ -21,7 +21,9 @@ async function analyzeContent(items) {
           role: 'user',
           content: `You are a cultural trends analyst for Broadway, India's curated multi-brand experiential retail destination. Analyze these articles and extract the most significant pop culture and consumer culture trends.
 
-For each trend, return ONLY valid JSON with no markdown or extra text. Use this exact structure:
+IMPORTANT: Return ONLY valid JSON with properly escaped strings (use \\\" for quotes inside text). No markdown, no code fences, no extra text.
+
+Use this exact structure:
 [
   {
     "title": "Trend name",
@@ -42,31 +44,40 @@ ${itemsText}`
       ]
     });
 
-    const content = response.content[0].type === 'text' ? response.content[0].text : '';
-    console.log(`[Analyzer] Claude response length: ${content.length}, first 300 chars: ${content.substring(0, 300)}`);
+    let content = response.content[0].type === 'text' ? response.content[0].text : '';
+    console.log(`[Analyzer] Claude response length: ${content.length}`);
     
-    let cleanedContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    // Remove markdown code fence
+    content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     
+    // Try to parse as-is first
     let trends = [];
     try {
-      trends = JSON.parse(cleanedContent);
+      trends = JSON.parse(content);
+      console.log(`[Analyzer] Successfully parsed ${trends.length} trends from Claude`);
+      return trends;
     } catch (parseErr) {
-      console.warn(`[Analyzer] Failed to parse JSON directly: ${parseErr.message}`);
-      console.log('[Analyzer] Trying regex extraction on cleaned content');
-      const jsonMatch = cleanedContent.match(/\[[\s\S]*\]/);
+      console.warn(`[Analyzer] JSON parse failed: ${parseErr.message}`);
+      
+      // Fallback: try to extract just the array
+      const jsonMatch = content.match(/\[[\s\S]*\]/);
       if (!jsonMatch) {
-        console.warn('[Analyzer] No valid JSON found in Claude response');
-        console.log('[Analyzer] Full cleaned response:', cleanedContent);
+        console.error('[Analyzer] No JSON array found in response');
+        console.log('[Analyzer] Raw response:', content.substring(0, 500));
         return [];
       }
-      trends = JSON.parse(jsonMatch[0]);
+      
+      try {
+        trends = JSON.parse(jsonMatch[0]);
+        console.log(`[Analyzer] Successfully parsed ${trends.length} trends from extracted JSON`);
+        return trends;
+      } catch (extractErr) {
+        console.error(`[Analyzer] Could not parse extracted JSON: ${extractErr.message}`);
+        return [];
+      }
     }
-    
-    console.log(`[Analyzer] Extracted ${trends.length} trends from Claude`);
-    return trends;
   } catch (err) {
     console.error(`[Analyzer] Failed to analyze content: ${err.message}`);
-    console.error('[Analyzer] Full error:', err);
     return [];
   }
 }
