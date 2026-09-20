@@ -159,3 +159,46 @@ export const getArchive = async (params = {}) => {
   const response = await api(endpoint);
   return response.data;
 };
+
+export const getTeamMembers = async () => {
+  const response = await api('/members');
+  return response.data;
+};
+
+export const addTeamMember = async (member) => {
+  const response = await api('/members', {
+    method: 'POST',
+    body: JSON.stringify(member),
+  });
+  return response.data;
+};
+
+export const updateTeamMember = async (id, member) => {
+  const response = await api(`/members/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(member),
+  });
+  return response.data;
+};
+
+export const deleteTeamMember = async (id) => {
+  const response = await api(`/members/${id}`, {
+    method: 'DELETE',
+  });
+  return response.data;
+};
+
+export const assignTrend = async (trendId, memberId) => {
+  const response = await api(`/trends/${trendId}/assign`, {
+    method: 'PUT',
+    body: JSON.stringify({ assigned_to: memberId }),
+  });
+  return response.data;
+};
+
+export const unassignTrend = async (trendId) => {
+  const response = await api(`/trends/${trendId}/unassign`, {
+    method: 'PUT',
+  });
+  return response.data;
+};
