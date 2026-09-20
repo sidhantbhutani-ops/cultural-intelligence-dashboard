@@ -20,6 +20,7 @@ export const Nav = ({ user }) => {
             <button onClick={() => navigate('/archive')} className="text-14 text-gray-700 hover:text-gray-900">Archive</button>
             <button onClick={() => navigate('/scraper-status')} className="text-14 text-gray-700 hover:text-gray-900">Scraper Status</button>
             <button onClick={() => navigate('/sources')} className="text-14 text-gray-700 hover:text-gray-900">Sources</button>
+            <button onClick={() => navigate('/team')} className="text-14 text-gray-700 hover:text-gray-900">Team</button>
           </div>
         </div>
         <div className="relative">
