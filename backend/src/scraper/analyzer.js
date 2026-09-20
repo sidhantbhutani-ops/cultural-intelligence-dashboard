@@ -45,7 +45,6 @@ ${itemsText}`
     const content = response.content[0].type === 'text' ? response.content[0].text : '';
     console.log(`[Analyzer] Claude response length: ${content.length}, first 300 chars: ${content.substring(0, 300)}`);
     
-    // Strip markdown code fence if present
     let cleanedContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     
     let trends = [];
@@ -90,7 +89,7 @@ async function storeAnalyzedTrends(trends) {
           trend.velocity,
           trend.engagement_metric,
           trend.cultural_significance,
-          JSON.stringify(trend.angles),
+          trend.angles,
           new Date().toISOString()
         ]
       );
