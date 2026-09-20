@@ -53,24 +53,18 @@ class ScraperOrchestrator {
     const startTime = Date.now();
     const runId = `run-${uuidv4()}`;
 
-    console.log(`[Scraper] ========================================`);
-    console.log(`[Scraper] Starting run at ${new Date().toISOString()}`);
-    console.log(`[Scraper] ========================================`);
-
     try {
       const sources = await this.loadSources();
-      if (sources.length === 0) {
-        console.warn('[Scraper] No active sources found');
-        return { success: false, message: 'No sources', duration: Date.now() - startTime };
-      }
-
       console.log(`[Scraper] Loaded ${sources.length} active sources`);
-      console.log(`[Scraper] Fetching from ${sources.length} sources...`);
-      
-      const fetchPromises = sources.map(source => 
-        this.fetchSourceContent(source).catch(() => null)
+
+      const promises = sources.map(source =>
+        this.fetchSourceContent(source).catch(err => {
+          console.error(`[Scraper] Source ${source.name} failed`, err);
+          return null;
+        })
       );
-      const allContent = await Promise.all(fetchPromises);
+
+      const allContent = await Promise.all(promises);
       const fetchedCount = allContent.filter(c => c !== null).length;
 
       const allItems = allContent
@@ -82,7 +76,7 @@ class ScraperOrchestrator {
       if (allItems.length === 0) {
         console.warn('[Scraper] No items fetched from any source');
         await this.logRun(runId, 'completed', 0, 0, 0, 'No items fetched', Date.now() - startTime);
-        return { success: true, trendsCreated: 0, duration: Date.now() - startTime };
+        return { success: true, storedTrends: [], duration: Date.now() - startTime };
       }
 
       console.log(`[Scraper] Deduplicating ${allItems.length} items...`);
@@ -91,7 +85,7 @@ class ScraperOrchestrator {
       if (uniqueItems.length === 0) {
         console.info('[Scraper] All items were duplicates');
         await this.logRun(runId, 'completed', allItems.length, 0, 0, 'All duplicates', Date.now() - startTime);
-        return { success: true, trendsCreated: 0, duration: Date.now() - startTime };
+        return { success: true, storedTrends: [], duration: Date.now() - startTime };
       }
 
       console.log(`[Scraper] Analyzing ${uniqueItems.length} unique items with Claude...`);
@@ -100,7 +94,7 @@ class ScraperOrchestrator {
       if (analyzedTrends.length === 0) {
         console.warn('[Scraper] No trends were successfully analyzed');
         await this.logRun(runId, 'completed', allItems.length, 0, uniqueItems.length, 'No trends analyzed', Date.now() - startTime);
-        return { success: true, trendsCreated: 0, duration: Date.now() - startTime };
+        return { success: true, storedTrends: [], duration: Date.now() - startTime };
       }
 
       console.log(`[Scraper] Storing ${analyzedTrends.length} trends to database...`);
@@ -126,6 +120,7 @@ class ScraperOrchestrator {
         uniqueItems: uniqueItems.length,
         trendsAnalyzed: analyzedTrends.length,
         trendsCreated: storedTrends.length,
+        storedTrends,
         duration,
       };
     } catch (err) {

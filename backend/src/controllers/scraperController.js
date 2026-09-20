@@ -1,6 +1,7 @@
 const { query } = require('../config/supabase.js');
 const { v4: uuidv4 } = require('uuid');
 const runScraper = require('../scraper/index.js');
+const { sendDailyTrendsReport } = require('../utils/slackNotifier.js');
 
 async function getStatus(req, res) {
   try {
@@ -43,8 +44,13 @@ async function triggerRun(req, res) {
 
     // Start scraper async in background
     runScraper.run()
-      .then(() => {
+      .then((result) => {
         console.log(`[Admin] Run ${runId} completed successfully`);
+        // Send Slack notification with trends
+        if (result.success && result.storedTrends && result.storedTrends.length > 0) {
+          sendDailyTrendsReport(result.storedTrends)
+            .catch(err => console.error('Failed to send Slack report:', err.message));
+        }
       })
       .catch(err => {
         console.error(`[Admin] Run ${runId} failed:`, err.message);
