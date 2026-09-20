@@ -1,5 +1,5 @@
 const express = require('express');
-const { authenticateToken } = require('../middleware/auth');
+const authMiddleware = require('../middleware/auth');
 const {
   getTeamMembers,
   addTeamMember,
@@ -12,7 +12,7 @@ const {
 const router = express.Router();
 
 // All routes require authentication
-router.use(authenticateToken);
+router.use(authMiddleware);
 
 // Team members CRUD
 router.get('/members', getTeamMembers);
