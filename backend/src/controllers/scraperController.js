@@ -106,8 +106,41 @@ async function cancelRun(req, res) {
 }
 
 
+
+async function testSlackNotification(req, res) {
+  try {
+    const { sendDailyTrendsReport } = require('../utils/slackNotifier.js');
+    
+    const testTrends = [
+      {
+        id: 'test-trend-1',
+        title: 'Test Trend - AI Fashion Collaborations',
+        description: 'Major fashion brands launching AI-designed collections',
+        source: 'WIRED',
+        category: 'fashion',
+        velocity: 'emerging',
+      }
+    ];
+    
+    await sendDailyTrendsReport(testTrends);
+    
+    res.json({
+      status: 'success',
+      message: 'Test Slack notification sent',
+    });
+  } catch (err) {
+    console.error('[Admin] Test Slack notification failed:', err.message);
+    res.status(500).json({
+      status: 'error',
+      message: err.message,
+    });
+  }
+}
+
+
 module.exports = {
   getStatus,
   triggerRun,
   cancelRun,
+  testSlackNotification,
 };
