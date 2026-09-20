@@ -1,31 +1,22 @@
-const db = require('../db/trends');
+const { query } = require('../config/supabase.js');
 
 async function getTrends(req, res, next) {
   try {
-    const { status = 'active', category, source, sort = 'latest', limit = 10, offset = 0, search } = req.query;
+    const { category, source, sort = 'latest', limit = 10, offset = 0, search } = req.query;
 
     let queryText = 'SELECT * FROM trends WHERE archived_at IS NULL';
     let params = [];
-    let paramCount = 1;
 
     if (category) {
-      const categories = category.split(',');
-      queryText += ` AND category = ANY($${paramCount}::varchar[])`;
-      params.push(categories);
-      paramCount++;
+      queryText += ` AND category = '${category}'`;
     }
 
     if (source) {
-      const sources = source.split(',');
-      queryText += ` AND source = ANY($${paramCount}::varchar[])`;
-      params.push(sources);
-      paramCount++;
+      queryText += ` AND source = '${source}'`;
     }
 
     if (search) {
-      queryText += ` AND (title ILIKE $${paramCount} OR description ILIKE $${paramCount})`;
-      params.push(`%${search}%`);
-      paramCount++;
+      queryText += ` AND (title ILIKE '%${search}%' OR description ILIKE '%${search}%')`;
     }
 
     if (sort === 'latest') {
@@ -36,120 +27,94 @@ async function getTrends(req, res, next) {
       queryText += ' ORDER BY created_at ASC';
     }
 
-    queryText += ` LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
-    params.push(parseInt(limit), parseInt(offset));
+    queryText += ` LIMIT ${limit} OFFSET ${offset}`;
 
-    const result = await db.query(queryText, params);
-    const trends = result.rows;
+    const result = await query(queryText, params);
+    const trends = result.rows || [];
 
-    const countResult = await db.query('SELECT COUNT(*) as count FROM trends WHERE archived_at IS NULL');
+    const countResult = await query('SELECT COUNT(*) as count FROM trends WHERE archived_at IS NULL', []);
     const total = countResult.rows[0] ? parseInt(countResult.rows[0].count) : 0;
 
     res.json({
       status: 'success',
-      data: {
-        trends,
-        pagination: {
-          total,
-          limit: parseInt(limit),
-          offset: parseInt(offset),
-          has_next: offset + parseInt(limit) < total,
-        },
+      data: trends,
+      pagination: {
+        total,
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        has_next: offset + parseInt(limit) < total,
       },
       timestamp: new Date().toISOString(),
     });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    console.error('[TrendController] getTrends error:', err.message);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch trends',
+      timestamp: new Date().toISOString(),
+    });
   }
 }
 
 async function getTrendById(req, res, next) {
   try {
     const { id } = req.params;
-
-    const trendResult = await db.query('SELECT * FROM trends WHERE id = $1', [id]);
-    if (trendResult.rows.length === 0) {
+    const result = await query('SELECT * FROM trends WHERE id = $1', [id]);
+    
+    if (!result.rows || result.rows.length === 0) {
       return res.status(404).json({
         status: 'error',
-        code: 'TREND_NOT_FOUND',
-        message: `Trend with ID '${id}' not found`,
+        message: 'Trend not found',
         timestamp: new Date().toISOString(),
       });
     }
 
-    const trend = trendResult.rows[0];
-
-    const actionsResult = await db.query(
-      'SELECT id, user_id, action_type, content, created_at FROM team_actions WHERE trend_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC',
-      [id]
-    );
-
     res.json({
       status: 'success',
-      data: {
-        ...trend,
-        team_actions: actionsResult.rows,
-      },
+      data: result.rows[0],
       timestamp: new Date().toISOString(),
     });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    console.error('[TrendController] getTrendById error:', err.message);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch trend',
+      timestamp: new Date().toISOString(),
+    });
   }
 }
 
 async function getArchive(req, res, next) {
   try {
-    const { category, source, search, limit = 10, offset = 0 } = req.query;
+    const { search, category, limit = 20, offset = 0 } = req.query;
 
-    let queryText = 'SELECT id, title, source, category, created_at, archived_at, picked_up, picked_up_at FROM trends WHERE archived_at IS NOT NULL';
-    let params = [];
-    let paramCount = 1;
-
-    if (category) {
-      const categories = category.split(',');
-      queryText += ` AND category = ANY($${paramCount}::varchar[])`;
-      params.push(categories);
-      paramCount++;
-    }
-
-    if (source) {
-      const sources = source.split(',');
-      queryText += ` AND source = ANY($${paramCount}::varchar[])`;
-      params.push(sources);
-      paramCount++;
-    }
+    let queryText = 'SELECT * FROM trends WHERE archived_at IS NOT NULL';
 
     if (search) {
-      queryText += ` AND (title ILIKE $${paramCount} OR description ILIKE $${paramCount})`;
-      params.push(`%${search}%`);
-      paramCount++;
+      queryText += ` AND (title ILIKE '%${search}%' OR description ILIKE '%${search}%')`;
     }
 
-    queryText += ' ORDER BY archived_at DESC';
-    queryText += ` LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
-    params.push(parseInt(limit), parseInt(offset));
+    if (category) {
+      queryText += ` AND category = '${category}'`;
+    }
 
-    const result = await db.query(queryText, params);
-    const trends = result.rows;
+    queryText += ' ORDER BY archived_at DESC LIMIT ' + limit + ' OFFSET ' + offset;
 
-    const countResult = await db.query('SELECT COUNT(*) as count FROM trends WHERE archived_at IS NOT NULL');
-    const total = countResult.rows[0] ? parseInt(countResult.rows[0].count) : 0;
+    const result = await query(queryText, []);
+    const trends = result.rows || [];
 
     res.json({
       status: 'success',
-      data: {
-        trends,
-        pagination: {
-          total,
-          limit: parseInt(limit),
-          offset: parseInt(offset),
-          has_next: offset + parseInt(limit) < total,
-        },
-      },
+      data: trends,
       timestamp: new Date().toISOString(),
     });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    console.error('[TrendController] getArchive error:', err.message);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch archive',
+      timestamp: new Date().toISOString(),
+    });
   }
 }
 
