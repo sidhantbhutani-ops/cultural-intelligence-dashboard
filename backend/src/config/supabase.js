@@ -38,7 +38,6 @@ async function handleSelect(sql, params) {
   
   if (!table) throw new Error('Could not determine table from SELECT');
   
-  // Special handling for COUNT queries
   if (sql.toUpperCase().includes('COUNT(*)')) {
     let qb = supabase.from(table).select('*', { count: 'exact' });
     
@@ -51,7 +50,6 @@ async function handleSelect(sql, params) {
     const { data, error, count } = await qb;
     if (error) throw error;
     
-    // Return count in expected format
     return { rows: [{ count }] };
   }
   
@@ -81,12 +79,16 @@ async function handleSelect(sql, params) {
     });
   }
   
-  const limitMatch = sql.match(/LIMIT\s+\$?(\d+)/i);
-  const offsetMatch = sql.match(/OFFSET\s+\$?(\d+)/i);
+  const limitMatch = sql.match(/LIMIT\s+\$(\d+)/i);
+  const offsetMatch = sql.match(/OFFSET\s+\$(\d+)/i);
   
   if (limitMatch) {
-    const limit = parseInt(limitMatch[1]);
-    const offset = offsetMatch ? parseInt(offsetMatch[1]) : 0;
+    const limitParamIndex = parseInt(limitMatch[1]) - 1;
+    const offsetParamIndex = offsetMatch ? parseInt(offsetMatch[1]) - 1 : -1;
+    
+    const limit = params[limitParamIndex] ? parseInt(params[limitParamIndex]) : 10;
+    const offset = offsetParamIndex >= 0 && params[offsetParamIndex] ? parseInt(params[offsetParamIndex]) : 0;
+    
     qb = qb.range(offset, offset + limit - 1);
   }
   
