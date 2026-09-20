@@ -3,6 +3,13 @@ const https = require('https');
 const sendSlackMessage = (channel, blocks) => {
   return new Promise((resolve, reject) => {
     const token = process.env.SLACK_BOT_TOKEN;
+    
+    if (!token || !channel) {
+      const err = `Missing Slack config: token=${!!token}, channel=${!!channel}`;
+      console.error('[Slack]', err);
+      return reject(new Error(err));
+    }
+    
     const data = JSON.stringify({
       channel,
       blocks,
@@ -19,24 +26,35 @@ const sendSlackMessage = (channel, blocks) => {
       },
     };
 
+    console.log(`[Slack] Sending message to channel: ${channel}`);
+    
     const req = https.request(options, (res) => {
       let body = '';
       res.on('data', chunk => body += chunk);
       res.on('end', () => {
         try {
           const json = JSON.parse(body);
+          console.log('[Slack] Response:', JSON.stringify(json));
+          
           if (json.ok) {
+            console.log('[Slack] Message sent successfully');
             resolve(json);
           } else {
+            console.error('[Slack] API error:', json.error);
             reject(new Error(json.error || 'Slack API error'));
           }
         } catch (e) {
+          console.error('[Slack] Parse error:', e.message);
           reject(e);
         }
       });
     });
 
-    req.on('error', reject);
+    req.on('error', (err) => {
+      console.error('[Slack] Request error:', err.message);
+      reject(err);
+    });
+    
     req.write(data);
     req.end();
   });
@@ -44,7 +62,7 @@ const sendSlackMessage = (channel, blocks) => {
 
 const sendDailyTrendsReport = async (trends) => {
   if (!trends || trends.length === 0) {
-    console.log('No trends to report');
+    console.log('[Slack] No trends to report');
     return;
   }
 
@@ -90,10 +108,11 @@ const sendDailyTrendsReport = async (trends) => {
   });
 
   try {
+    console.log('[Slack] Starting to send daily trends report...');
     await sendSlackMessage(process.env.SLACK_CHANNEL, blocks);
-    console.log('Daily trends report sent to Slack');
+    console.log('[Slack] Daily trends report sent successfully');
   } catch (error) {
-    console.error('Failed to send Slack report:', error.message);
+    console.error('[Slack] Failed to send Slack report:', error.message);
   }
 };
 
