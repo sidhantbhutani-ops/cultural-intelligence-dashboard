@@ -45,7 +45,6 @@ ${itemsText}`
     const content = response.content[0].type === 'text' ? response.content[0].text : '';
     console.log(`[Analyzer] Claude response length: ${content.length}, first 300 chars: ${content.substring(0, 300)}`);
     
-    // Extract JSON from response
     const jsonMatch = content.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
       console.warn('[Analyzer] No valid JSON found in Claude response');
@@ -63,16 +62,14 @@ ${itemsText}`
   }
 }
 
-
-
 async function storeAnalyzedTrends(trends) {
   try {
     const trendIds = [];
     for (const trend of trends) {
       const trendId = uuidv4();
       await query(
-        `INSERT INTO trends (id, title, description, source, source_url, category, velocity, engagement_metric, cultural_significance, angles, cluster_id, created_at) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        `INSERT INTO trends (id, title, description, source, source_url, category, velocity, engagement_metric, cultural_significance, angles, created_at) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
         [
           trendId,
           trend.title,
@@ -84,7 +81,6 @@ async function storeAnalyzedTrends(trends) {
           trend.engagement_metric,
           trend.cultural_significance,
           JSON.stringify(trend.angles),
-          trend.cluster_id,
           new Date().toISOString()
         ]
       );
