@@ -26,14 +26,16 @@ async function getStatus(req, res) {
     }));
 
     res.json({
-      success: true,
-      lastRuns,
+      status: 'success',
+      data: {
+        lastRuns,
+      },
     });
   } catch (err) {
     console.error('[Admin] Status query failed:', err.message);
     res.status(500).json({
-      success: false,
-      error: err.message,
+      status: 'error',
+      message: err.message,
     });
   }
 }
@@ -57,16 +59,17 @@ async function triggerRun(req, res) {
       });
 
     res.json({
-      success: true,
-      runId,
-      status: 'started',
-      message: 'Scraper job triggered',
+      status: 'success',
+      data: {
+        runId,
+        message: 'Scraper job triggered',
+      },
     });
   } catch (err) {
     console.error('[Admin] Trigger run failed:', err.message);
     res.status(500).json({
-      success: false,
-      error: err.message,
+      status: 'error',
+      message: err.message,
     });
   }
 }
