@@ -9,10 +9,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-/**
- * Wrapper to maintain same interface as old pg query() function
- * Now returns { rows, error } for backward compatibility
- */
 async function query(sql, params = []) {
   try {
     const sqlUpper = sql.toUpperCase();
@@ -30,6 +26,8 @@ async function query(sql, params = []) {
     throw new Error(`Unsupported SQL operation: ${sql.substring(0, 50)}`);
   } catch (err) {
     console.error(`[Supabase Query Error] ${err.message}`);
+    console.error(`[SQL] ${sql}`);
+    console.error(`[Params] ${JSON.stringify(params)}`);
     return { rows: [], error: err };
   }
 }
@@ -40,10 +38,42 @@ async function handleSelect(sql, params) {
   
   if (!table) throw new Error('Could not determine table from SELECT');
   
-  let query = supabase.from(table).select('*');
-  query = applyWhereConditions(query, sql, params);
+  let qb = supabase.from(table).select('*');
   
-  const { data, error } = await query;
+  const whereMatch = sql.match(/WHERE\s+(.*?)(?:ORDER|LIMIT|RETURNING|$)/i);
+  if (whereMatch) {
+    const whereClause = whereMatch[1].trim();
+    qb = applyWhereConditions(qb, whereClause, params);
+  }
+  
+  const orderMatch = sql.match(/ORDER\s+BY\s+(.*?)(?:LIMIT|$)/i);
+  if (orderMatch) {
+    const orderClause = orderMatch[1].trim();
+    const orders = orderClause.split(',').map(o => o.trim());
+    
+    orders.forEach(order => {
+      if (order.includes('DESC')) {
+        const col = order.replace(/DESC/i, '').trim();
+        qb = qb.order(col, { ascending: false });
+      } else if (order.includes('ASC')) {
+        const col = order.replace(/ASC/i, '').trim();
+        qb = qb.order(col, { ascending: true });
+      } else {
+        qb = qb.order(order, { ascending: true });
+      }
+    });
+  }
+  
+  const limitMatch = sql.match(/LIMIT\s+\$?(\d+)/i);
+  const offsetMatch = sql.match(/OFFSET\s+\$?(\d+)/i);
+  
+  if (limitMatch) {
+    const limit = parseInt(limitMatch[1]);
+    const offset = offsetMatch ? parseInt(offsetMatch[1]) : 0;
+    qb = qb.range(offset, offset + limit - 1);
+  }
+  
+  const { data, error } = await qb;
   if (error) throw error;
   
   return { rows: data || [] };
@@ -93,8 +123,12 @@ async function handleUpdate(sql, params) {
   
   setPairs.forEach(pair => {
     const [col] = pair.split('=').map(p => p.trim());
-    if (col && col !== 'updated_at') {
-      updateData[col] = params[paramIdx++];
+    if (col && col !== 'updated_at' && col !== 'CURRENT_TIMESTAMP') {
+      if (pair.includes('CURRENT_TIMESTAMP')) {
+        updateData[col] = new Date().toISOString();
+      } else if (paramIdx < params.length) {
+        updateData[col] = params[paramIdx++];
+      }
     }
   });
   
@@ -102,10 +136,13 @@ async function handleUpdate(sql, params) {
     updateData['updated_at'] = new Date().toISOString();
   }
   
-  let query = supabase.from(table).update(updateData);
-  query = applyWhereConditions(query, sql, params.slice(paramIdx));
+  let qb = supabase.from(table).update(updateData);
+  const whereMatch = sql.match(/WHERE\s+(.*?)(?:RETURNING|$)/i);
+  if (whereMatch) {
+    qb = applyWhereConditions(qb, whereMatch[1].trim(), params.slice(paramIdx));
+  }
   
-  const { data, error } = await query.select();
+  const { data, error } = await qb.select();
   
   if (error) throw error;
   return { rows: data || [] };
@@ -117,62 +154,62 @@ async function handleDelete(sql, params) {
   
   if (!table) throw new Error('Could not determine table from DELETE');
   
-  let query = supabase.from(table).delete();
-  query = applyWhereConditions(query, sql, params);
+  let qb = supabase.from(table).delete();
+  const whereMatch = sql.match(/WHERE\s+(.*?)$/i);
+  if (whereMatch) {
+    qb = applyWhereConditions(qb, whereMatch[1].trim(), params);
+  }
   
-  const { data, error } = await query.select();
+  const { data, error } = await qb.select();
   
   if (error) throw error;
   return { rows: data || [] };
 }
 
-function applyWhereConditions(query, sql, params) {
-  const whereMatch = sql.match(/WHERE\s+(.*?)(?:ORDER|LIMIT|RETURNING|$)/i);
-  if (!whereMatch) return query;
+function applyWhereConditions(qb, whereClause, params) {
+  if (!whereClause || whereClause.trim() === '') return qb;
   
-  const whereClause = whereMatch[1].trim();
   const conditions = whereClause.split(/\s+AND\s+/i);
-  
   let paramIdx = 0;
   
   conditions.forEach(condition => {
     condition = condition.trim();
     
+    if (condition === '1=1' || condition === '0=0') {
+      return;
+    }
+    
     if (condition.includes('IS NULL')) {
       const col = condition.split('IS NULL')[0].trim();
-      query = query.is(col, null);
+      qb = qb.is(col, null);
     } else if (condition.includes('IS NOT NULL')) {
       const col = condition.split('IS NOT NULL')[0].trim();
-      query = query.not(col, 'is', null);
-    } else if (condition.includes('LOWER(') && condition.includes('LOWER(')) {
-      const colMatch = condition.match(/LOWER\((\w+)\)/);
-      const col = colMatch ? colMatch[1] : null;
-      if (col && params[paramIdx]) {
-        query = query.ilike(col, `%${params[paramIdx]}%`);
+      qb = qb.not(col, 'is', null);
+    } else if (condition.includes('ANY(')) {
+      const match = condition.match(/(\w+)\s*=\s*ANY/i);
+      if (match && params[paramIdx]) {
+        const col = match[1];
+        const values = params[paramIdx];
+        qb = qb.in(col, values);
+        paramIdx++;
+      }
+    } else if (condition.includes('ILIKE')) {
+      const match = condition.match(/(\w+)\s+ILIKE/i);
+      if (match && params[paramIdx]) {
+        const col = match[1];
+        qb = qb.ilike(col, params[paramIdx]);
         paramIdx++;
       }
     } else if (condition.includes('=')) {
       const [col] = condition.split('=').map(c => c.trim());
       if (params[paramIdx] !== undefined) {
-        query = query.eq(col, params[paramIdx]);
-        paramIdx++;
-      }
-    } else if (condition.includes('>')) {
-      const [col] = condition.split('>').map(c => c.trim());
-      if (params[paramIdx] !== undefined) {
-        query = query.gt(col, params[paramIdx]);
-        paramIdx++;
-      }
-    } else if (condition.includes('<')) {
-      const [col] = condition.split('<').map(c => c.trim());
-      if (params[paramIdx] !== undefined) {
-        query = query.lt(col, params[paramIdx]);
+        qb = qb.eq(col, params[paramIdx]);
         paramIdx++;
       }
     }
   });
   
-  return query;
+  return qb;
 }
 
 module.exports = {
