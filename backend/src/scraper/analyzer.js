@@ -67,8 +67,8 @@ async function storeAnalyzedTrends(trends) {
     for (const trend of trends) {
       const trendId = uuidv4();
       await query(
-        `INSERT INTO trends (id, title, description, source, source_url, category, velocity, engagement_metric, cultural_significance, angles, created_at) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        `INSERT INTO trends (id, title, description, source, source_url, category, velocity, engagement_metric, cultural_significance, angles, happening, created_at) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
         [
           trendId,
           trend.title,
@@ -80,6 +80,7 @@ async function storeAnalyzedTrends(trends) {
           trend.engagement_metric,
           trend.cultural_significance,
           trend.angles,
+          'active',
           new Date().toISOString()
         ]
       );
