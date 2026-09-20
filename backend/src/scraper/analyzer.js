@@ -8,7 +8,7 @@ const client = new Anthropic();
 async function analyzeContent(items) {
   try {
     const itemsText = items
-      .map((item, i) => `${i + 1}. Title: ${item.title}\nSource: ${item.source}\nURL: ${item.url}\nSummary: ${item.description || 'N/A'}`)
+      .map((item, i) => `${i + 1}. Title: ${item.title}\nSource: ${item.source}\nURL: ${item.source_url}\nSummary: ${item.description || 'N/A'}`)
       .join('\n\n');
 
     console.log(`[Analyzer] Sending ${items.length} items to Claude for analysis`);
