@@ -152,3 +152,10 @@ export const testSource = async (id) => {
   });
   return response.data;
 };
+
+export const getArchive = async (params = {}) => {
+  const queryString = new URLSearchParams(params).toString();
+  const endpoint = queryString ? `/trends/archive?${queryString}` : '/trends/archive';
+  const response = await api(endpoint);
+  return response.data;
+};

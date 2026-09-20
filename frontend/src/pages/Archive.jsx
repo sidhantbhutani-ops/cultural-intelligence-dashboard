@@ -6,7 +6,7 @@ import { TrendCard } from '../components/TrendCard';
 import { Modal } from '../components/Modal';
 import { Spinner } from '../components/Spinner';
 import { Toast } from '../components/Toast';
-import { api } from '../api';
+import { getArchive } from '../api';
 import { TrendDetail } from '../components/TrendDetail';
 
 export const Archive = () => {
@@ -29,10 +29,8 @@ export const Archive = () => {
         category: filters.category,
         source: filters.source,
       };
-      const queryString = new URLSearchParams(params).toString();
-      const endpoint = queryString ? `/trends/archive?${queryString}` : '/trends/archive';
-      const response = await api(endpoint);
-      setTrends(response.data.trends || []);
+      const data = await getArchive(params);
+      setTrends(data.trends || []);
     } catch (error) {
       console.error('Failed to load archive:', error);
       Toast.error('Failed to load archived trends');
