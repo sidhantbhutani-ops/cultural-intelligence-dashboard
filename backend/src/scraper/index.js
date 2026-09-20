@@ -54,9 +54,9 @@ class ScraperOrchestrator {
     }
   }
 
-  async run() {
+  async run(providedRunId) {
     const startTime = Date.now();
-    const runId = `run-${uuidv4()}`;
+    const runId = providedRunId || `run-${uuidv4()}`;
 
     try {
       const sources = await this.loadSources();

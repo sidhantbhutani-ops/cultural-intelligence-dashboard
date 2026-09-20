@@ -44,8 +44,8 @@ async function triggerRun(req, res) {
   try {
     const runId = `run-${uuidv4()}`;
 
-    // Start scraper async in background
-    runScraper.run()
+    // Start scraper async in background, passing the runId
+    runScraper.run(runId)
       .then((result) => {
         console.log(`[Admin] Run ${runId} completed successfully`);
         // Send Slack notification with trends
