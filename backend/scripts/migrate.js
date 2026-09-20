@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { query } = require('../src/config/database');
+const { query } = require('../src/config/supabase');
 
 async function runMigrations() {
   console.log('[Migrate] Starting database migrations...');

@@ -1,10 +1,13 @@
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config({ path: '.env.local' });
 
 const { port } = require('./config/env');
 const loggerMiddleware = require('./middleware/logger');
 const errorHandler = require('./middleware/errorHandler');
+const { query } = require('./config/supabase');
 
 // Routes
 const authRouter = require('./routes/auth');
@@ -48,8 +51,46 @@ app.use((req, res) => {
 // Error Handler Middleware
 app.use(errorHandler);
 
-const server = app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
+// Run migrations before starting server
+async function runMigrations() {
+  try {
+    console.log('[Server] Starting database migrations...');
+    const migrationsDir = path.join(__dirname, '../migrations');
+    const files = fs.readdirSync(migrationsDir)
+      .filter(f => f.endsWith('.sql'))
+      .sort();
+
+    for (const file of files) {
+      const filePath = path.join(migrationsDir, file);
+      const sql = fs.readFileSync(filePath, 'utf8');
+      try {
+        console.log(`[Server] Running migration: ${file}...`);
+        await query(sql);
+        console.log(`[Server] ✓ ${file} completed`);
+      } catch (error) {
+        console.warn(`[Server] Migration ${file} already applied or skipped: ${error.message}`);
+      }
+    }
+    console.log('[Server] Migrations completed');
+  } catch (err) {
+    console.error('[Server] Migration error:', err.message);
+  }
+}
+
+// Start server
+async function startServer() {
+  await runMigrations();
+  
+  const server = app.listen(port, () => {
+    console.log(`[Server] ✅ Running on http://localhost:${port}`);
+  });
+
+  return server;
+}
+
+startServer().catch(err => {
+  console.error('[Server] Fatal startup error:', err);
+  process.exit(1);
 });
 
-module.exports = server;
+module.exports = app;
