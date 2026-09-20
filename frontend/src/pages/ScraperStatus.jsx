@@ -8,17 +8,25 @@ import { getScraperStatus, triggerScraper } from '../api';
 // Format timestamp to IST consistently
 const formatIST = (dateString) => {
   if (!dateString) return 'N/A';
-  const date = new Date(dateString);
-  return new Date(date.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }))
-    .toLocaleDateString('en-IN', {
+  try {
+    // Parse the ISO string
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Invalid Date';
+    
+    // Format to IST using toLocaleString
+    return date.toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      year: '2-digit',
       month: '2-digit',
       day: '2-digit',
-      year: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
       hour12: false
     });
+  } catch (e) {
+    return 'Invalid Date';
+  }
 };
 
 export const ScraperStatus = () => {
@@ -33,7 +41,9 @@ export const ScraperStatus = () => {
   const loadStatus = async () => {
     try {
       const data = await getScraperStatus();
-      const newRuns = data.lastRuns || [];
+      const newRuns = (data.lastRuns || []).sort((a, b) => 
+        new Date(b.startedAt) - new Date(a.startedAt)
+      );
       setRuns(newRuns);
       setLastRefresh(new Date());
 
@@ -44,6 +54,7 @@ export const ScraperStatus = () => {
           // New run completed
           setScraperRunning(false);
           setElapsedSeconds(0);
+          setLastRunId(latestRun.runId);
           Toast.success(`Scraper completed: ${latestRun.trendsCreated} created, ${latestRun.trendsSkipped} skipped`);
         }
       }
@@ -147,7 +158,7 @@ export const ScraperStatus = () => {
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-16 font-bold text-gray-900">Run History</h3>
-              <p className="text-13 text-gray-600 mt-1">Last 10 scraper runs (all times in IST)</p>
+              <p className="text-13 text-gray-600 mt-1">Latest runs first (all times in IST)</p>
             </div>
 
             <div className="overflow-x-auto">
@@ -166,7 +177,7 @@ export const ScraperStatus = () => {
                 <tbody className="divide-y divide-gray-200">
                   {runs && runs.length > 0 ? (
                     runs.map((run, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50 transition">
+                      <tr key={idx} className={`${idx === 0 ? 'bg-blue-50' : ''} hover:bg-gray-50 transition`}>
                         <td className="px-6 py-4 text-13 font-mono text-gray-900">{run.runId.slice(0, 8)}...</td>
                         <td className="px-6 py-4 text-13">
                           <span
