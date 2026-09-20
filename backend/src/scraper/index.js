@@ -16,19 +16,31 @@ class ScraperOrchestrator {
     } catch (err) {
       console.error(`[Scraper] Failed to load sources: ${err.message}`);
       throw err;
-    }
-  }
-
   async fetchSourceContent(source) {
     try {
       let fetcher;
-      if (source.scrape_strategy === 'rss_feed') {
+      // Accept both 'rss' and 'rss_feed'
+      if (source.scrape_strategy === 'rss' || source.scrape_strategy === 'rss_feed') {
         fetcher = fetchRSS;
       } else if (source.scrape_strategy === 'news' || source.scrape_strategy === 'api') {
         fetcher = fetchNews;
+      } else if (source.scrape_strategy === 'html') {
+        const { fetch: fetchHTML } = require('./fetchers/html.js');
+        fetcher = fetchHTML;
       } else {
         console.log(`[Scraper] No fetcher for strategy: ${source.scrape_strategy}`);
         return [];
+      }
+        fetcher = fetchRSS;
+      } else if (source.scrape_strategy === 'news' || source.scrape_strategy === 'api') {
+        fetcher = fetchNews;
+      } else if (source.scrape_strategy === 'html') {
+        const { fetch: fetchHTML } = require('./fetchers/html.js');
+        fetcher = fetchHTML;
+      } else {
+        console.log(`[Scraper] No fetcher for strategy: ${source.scrape_strategy}`);
+        return [];
+      }
       }
 
       console.log(`[Scraper] Fetching ${source.name}...`);
