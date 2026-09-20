@@ -1,6 +1,7 @@
 const { query } = require('../config/supabase.js');
 const { v4: uuidv4 } = require('uuid');
 const Anthropic = require('@anthropic-ai/sdk');
+const { scoreTrendWithRAD } = require('../services/trendScoringService.js');
 
 const client = new Anthropic();
 
@@ -59,6 +60,7 @@ ${itemsText}`
 
 async function storeAnalyzedTrends(trends) {
   const stored = [];
+  const scoringPromises = [];
 
   for (const trend of trends) {
     try {
@@ -89,10 +91,22 @@ async function storeAnalyzedTrends(trends) {
 
       stored.push(trendId);
       console.log(`[Analyzer] Stored trend: "${trend.title}" (signal: ${trend.signal_strength})`);
+
+      // Score the trend asynchronously (non-blocking)
+      scoringPromises.push(
+        scoreTrendWithRAD(trendId, trend).catch(err => 
+          console.error(`[Analyzer] Scoring failed for trend ${trendId}: ${err.message}`)
+        )
+      );
     } catch (err) {
       console.error(`[Analyzer] Failed to store trend "${trend.title}": ${err.message}`);
     }
   }
+
+  // Fire all scoring requests in parallel without blocking the scraper
+  Promise.all(scoringPromises).catch(err => 
+    console.error(`[Analyzer] Batch scoring error: ${err.message}`)
+  );
 
   return stored;
 }
