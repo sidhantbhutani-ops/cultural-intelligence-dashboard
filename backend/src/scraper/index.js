@@ -5,6 +5,7 @@ const { fetch: fetchNews } = require('./fetchers/news.js');
 const { analyzeContent } = require('./analyzer.js');
 const { dedupItems } = require('./deduplicator.js');
 const { storeAnalyzedTrends } = require('./analyzer.js');
+const { clusterArticles, calculateSignalStrength } = require('./clustering.js');
 
 class ScraperOrchestrator {
   async loadSources() {
@@ -75,7 +76,7 @@ class ScraperOrchestrator {
 
       if (allItems.length === 0) {
         console.warn('[Scraper] No items fetched from any source');
-        await this.logRun(runId, 'completed', 0, 0, 0, 'No items fetched', Date.now() - startTime);
+        await this.logRun(runId, 'completed', 0, 0, 0, 'No items fetched', Date.now() - startTime, 0);
         return { success: true, storedTrends: [], duration: Date.now() - startTime };
       }
 
@@ -84,21 +85,55 @@ class ScraperOrchestrator {
 
       if (uniqueItems.length === 0) {
         console.info('[Scraper] All items were duplicates');
-        await this.logRun(runId, 'completed', allItems.length, 0, 0, 'All duplicates', Date.now() - startTime);
+        await this.logRun(runId, 'completed', allItems.length, 0, 0, 'All duplicates', Date.now() - startTime, 0);
         return { success: true, storedTrends: [], duration: Date.now() - startTime };
       }
 
-      console.log(`[Scraper] Analyzing ${uniqueItems.length} unique items with Claude...`);
+      console.log(`[Scraper] Clustering ${uniqueItems.length} unique items...`);
+      const clusters = await clusterArticles(uniqueItems);
+      const topicsFound = clusters.length;
+
+      if (clusters.length === 0) {
+        console.warn('[Scraper] No clusters formed from unique items');
+        await this.logRun(runId, 'completed', allItems.length, 0, uniqueItems.length, 'No clusters formed', Date.now() - startTime, 0);
+        return { success: true, storedTrends: [], duration: Date.now() - startTime };
+      }
+
+      console.log(`[Scraper] Analyzing ${clusters.length} topics with Claude...`);
       const analyzedTrends = await analyzeContent(uniqueItems);
 
       if (analyzedTrends.length === 0) {
         console.warn('[Scraper] No trends were successfully analyzed');
-        await this.logRun(runId, 'completed', allItems.length, 0, uniqueItems.length, 'No trends analyzed', Date.now() - startTime);
+        await this.logRun(runId, 'completed', allItems.length, 0, uniqueItems.length, 'No trends analyzed', Date.now() - startTime, topicsFound);
         return { success: true, storedTrends: [], duration: Date.now() - startTime };
       }
 
-      console.log(`[Scraper] Storing ${analyzedTrends.length} trends to database...`);
-      const storedTrends = await storeAnalyzedTrends(analyzedTrends);
+      console.log(`[Scraper] Enriching ${analyzedTrends.length} trends with clustering data...`);
+      const enrichedTrends = analyzedTrends.map(trend => {
+        // Find matching cluster for this trend
+        const matchingCluster = clusters.find(cluster => 
+          cluster.articles.some(article => article.title.toLowerCase().includes(trend.title.toLowerCase().substring(0, 30)))
+        );
+
+        if (matchingCluster) {
+          return {
+            ...trend,
+            source_count: matchingCluster.sources.size,
+            signal_strength: calculateSignalStrength(matchingCluster.sources.size),
+            source_names: Array.from(matchingCluster.sources)
+          };
+        }
+
+        return {
+          ...trend,
+          source_count: 1,
+          signal_strength: 3,
+          source_names: [trend.source]
+        };
+      });
+
+      console.log(`[Scraper] Storing ${enrichedTrends.length} trends to database...`);
+      const storedTrends = await storeAnalyzedTrends(enrichedTrends);
 
       const duration = Date.now() - startTime;
       console.log(`[Scraper] ========================================`);
@@ -107,17 +142,19 @@ class ScraperOrchestrator {
       console.log(`[Scraper] Sources fetched: ${fetchedCount}/${sources.length}`);
       console.log(`[Scraper] Items fetched: ${allItems.length}`);
       console.log(`[Scraper] Unique items: ${uniqueItems.length}`);
+      console.log(`[Scraper] Topics found: ${topicsFound}`);
       console.log(`[Scraper] Trends analyzed: ${analyzedTrends.length}`);
       console.log(`[Scraper] Trends stored: ${storedTrends.length}`);
       console.log(`[Scraper] ========================================`);
 
-      await this.logRun(runId, 'completed', allItems.length, storedTrends.length, uniqueItems.length - storedTrends.length, null, duration);
+      await this.logRun(runId, 'completed', allItems.length, storedTrends.length, uniqueItems.length - storedTrends.length, null, duration, topicsFound);
 
       return {
         success: true,
         sourcesFetched: fetchedCount,
         itemsFetched: allItems.length,
         uniqueItems: uniqueItems.length,
+        topicsFound,
         trendsAnalyzed: analyzedTrends.length,
         trendsCreated: storedTrends.length,
         storedTrends,
@@ -126,18 +163,18 @@ class ScraperOrchestrator {
     } catch (err) {
       console.error(`[Scraper] ❌ Run failed: ${err.message}`);
       const duration = Date.now() - startTime;
-      await this.logRun(runId, 'failed', 0, 0, 0, err.message, duration);
+      await this.logRun(runId, 'failed', 0, 0, 0, err.message, duration, 0);
       return { success: false, error: err.message, duration };
     }
   }
 
-  async logRun(runId, status, itemsFetched, trendsCreated, trendsSkipped, errorMessage, durationMs) {
+  async logRun(runId, status, itemsFetched, trendsCreated, trendsSkipped, errorMessage, durationMs, topicsFound) {
     try {
       await query(
         `INSERT INTO scraper_logs 
-         (run_id, status, trends_found, trends_created, trends_skipped, error_message, duration_seconds, started_at, completed_at, sources_scraped, triggered_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW(), $8, $9)`,
-        [runId, status, itemsFetched, trendsCreated, trendsSkipped, errorMessage, Math.ceil(durationMs / 1000), ['rss', 'news'], 'api']
+         (run_id, status, trends_found, trends_created, trends_skipped, error_message, duration_seconds, started_at, completed_at, sources_scraped, triggered_by, topics_found)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW(), $8, $9, $10)`,
+        [runId, status, itemsFetched, trendsCreated, trendsSkipped, errorMessage, Math.ceil(durationMs / 1000), ['rss', 'news'], 'api', topicsFound]
       );
     } catch (err) {
       console.error(`[Scraper] Failed to log run: ${err.message}`);
