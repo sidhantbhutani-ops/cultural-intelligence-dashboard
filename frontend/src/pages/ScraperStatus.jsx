@@ -5,7 +5,7 @@ import { Spinner } from '../components/Spinner';
 import { Progress } from '../components/Progress';
 import { getScraperStatus, triggerScraper } from '../api';
 
-// Format timestamp to IST consistently
+// Format timestamp to IST with 12-hour AM/PM format
 const formatIST = (dateString) => {
   if (!dateString) return 'N/A';
   try {
@@ -20,7 +20,7 @@ const formatIST = (dateString) => {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
-      hour12: false
+      hour12: true
     });
   } catch (e) {
     return 'Invalid Date';
