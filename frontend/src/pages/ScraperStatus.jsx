@@ -1,191 +1,215 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
-import { Spinner } from '../components/Spinner';
 import { Toast } from '../components/Toast';
+import { Spinner } from '../components/Spinner';
+import { Progress } from '../components/Progress';
 import { getScraperStatus, triggerScraper } from '../api';
+
+// Format timestamp to IST consistently
+const formatIST = (dateString) => {
+  if (!dateString) return 'N/A';
+  const date = new Date(dateString);
+  return new Date(date.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }))
+    .toLocaleDateString('en-IN', {
+      month: '2-digit',
+      day: '2-digit',
+      year: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+};
 
 export const ScraperStatus = () => {
   const [runs, setRuns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [triggering, setTriggering] = useState(false);
-  const [error, setError] = useState(null);
+  const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [scraperRunning, setScraperRunning] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [lastRunId, setLastRunId] = useState(null);
 
-  useEffect(() => {
-    fetchStatus();
-  }, []);
-
-  const fetchStatus = async () => {
-    setLoading(true);
-    setError(null);
+  const loadStatus = async () => {
     try {
-      console.log('Fetching scraper status...');
       const data = await getScraperStatus();
-      console.log('Scraper status data:', data);
-      setRuns(data.lastRuns || []);
+      const newRuns = data.lastRuns || [];
+      setRuns(newRuns);
+      setLastRefresh(new Date());
+
+      // Check if scraper completed
+      if (scraperRunning && newRuns.length > 0) {
+        const latestRun = newRuns[0];
+        if (latestRun.runId !== lastRunId) {
+          // New run completed
+          setScraperRunning(false);
+          setElapsedSeconds(0);
+          Toast.success(`Scraper completed: ${latestRun.trendsCreated} created, ${latestRun.trendsSkipped} skipped`);
+        }
+      }
     } catch (error) {
-      console.error('Error fetching scraper status:', error);
-      setError(error.message || 'Failed to load scraper status');
-      Toast.error('Failed to load scraper status');
+      console.error('Failed to load scraper status:', error);
     } finally {
       setLoading(false);
     }
   };
 
+  // Initial load + auto-refresh every 10 seconds
+  useEffect(() => {
+    loadStatus();
+    const interval = setInterval(loadStatus, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Track elapsed time while scraper is running
+  useEffect(() => {
+    if (!scraperRunning) return;
+
+    const interval = setInterval(() => {
+      setElapsedSeconds(prev => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [scraperRunning]);
+
   const handleTrigger = async () => {
-    setTriggering(true);
     try {
+      setTriggering(true);
+      setScraperRunning(true);
+      setElapsedSeconds(0);
+      
       await triggerScraper();
-      Toast.success('Scraper triggered successfully');
-      setTimeout(fetchStatus, 2000);
+      Toast.success('Scraper job triggered');
+      
+      // Refresh immediately, then again after 2 seconds
+      setTimeout(loadStatus, 1000);
+      setTimeout(loadStatus, 3000);
     } catch (error) {
+      console.error('Failed to trigger scraper:', error);
       Toast.error('Failed to trigger scraper');
-      console.error(error);
+      setScraperRunning(false);
     } finally {
       setTriggering(false);
     }
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '—';
-    return new Date(dateString).toLocaleString();
-  };
-
-  const getDurationDisplay = (seconds) => {
-    if (!seconds) return '—';
-    if (seconds < 60) return `${seconds}s`;
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${minutes}m ${secs}s`;
-  };
-
-  const getStatusBadge = (status) => {
-    const baseClass = 'px-2 py-1 rounded text-12 font-medium';
-    switch (status?.toLowerCase()) {
-      case 'success':
-        return <span className={`${baseClass} bg-green-100 text-green-700`}>Success</span>;
-      case 'failed':
-        return <span className={`${baseClass} bg-red-100 text-red-700`}>Failed</span>;
-      case 'running':
-        return <span className={`${baseClass} bg-blue-100 text-blue-700`}>Running</span>;
-      default:
-        return <span className={`${baseClass} bg-gray-100 text-gray-700`}>{status}</span>;
-    }
-  };
-
-  if (error) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="bg-red-50 rounded-lg p-6 border border-red-200">
-            <h2 className="text-18 font-bold text-red-900 mb-2">Error Loading Scraper Status</h2>
-            <p className="text-14 text-red-700 mb-4">{error}</p>
-            <Button onClick={fetchStatus} variant="primary" size="md">
-              Try Again
-            </Button>
-          </div>
-        </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Spinner />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-32 font-bold text-gray-900">Scraper Status</h1>
-            <p className="text-14 text-gray-600 mt-1">Monitor scraper runs and trigger manual jobs</p>
-          </div>
-          <Button 
-            onClick={handleTrigger} 
-            loading={triggering}
-            variant="primary"
-            size="md"
-          >
-            Run Scraper Now
-          </Button>
-        </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Progress bar */}
+      <Progress isVisible={scraperRunning} elapsedSeconds={elapsedSeconds} />
 
-        {loading ? (
-          <div className="flex justify-center items-center py-20">
-            <Spinner />
+      <div className="px-8 py-12">
+        <div className="max-w-6xl mx-auto space-y-8">
+          {/* Header */}
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-28 font-bold text-gray-900">Scraper Status</h1>
+              <p className="text-14 text-gray-600 mt-2">Monitor scraper runs and trigger manual jobs</p>
+            </div>
+            <Button 
+              onClick={handleTrigger} 
+              variant="primary" 
+              disabled={triggering || scraperRunning}
+              className="whitespace-nowrap"
+            >
+              {triggering ? 'Starting...' : scraperRunning ? 'Running...' : 'Run Scraper Now'}
+            </Button>
           </div>
-        ) : (
-          <>
-            <div className="bg-white rounded-lg shadow p-6 mb-8 border-l-4 border-blue-500">
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <p className="text-14 text-gray-600">Next Scheduled Run</p>
-                  <p className="text-16 font-semibold text-gray-900 mt-1">8:00 AM IST (Daily)</p>
-                  <p className="text-12 text-gray-500 mt-2">Every day at 8:00 AM India Standard Time</p>
-                </div>
-                <div>
-                  <p className="text-14 text-gray-600">Scraper Status</p>
-                  <p className="text-16 font-semibold text-gray-900 mt-1">Active</p>
-                  <p className="text-12 text-gray-500 mt-2">Cron job running: 30 2 * * *</p>
-                </div>
-              </div>
+
+          {/* Status Cards */}
+          <div className="grid grid-cols-2 gap-6">
+            <div className="bg-white rounded-lg p-6 border border-gray-200">
+              <h3 className="text-14 font-semibold text-gray-900 mb-2">Next Scheduled Run</h3>
+              <p className="text-18 font-bold text-gray-900">8:00 AM IST</p>
+              <p className="text-13 text-gray-600 mt-1">Daily at 8:00 AM India Standard Time</p>
+              <p className="text-12 text-gray-500 mt-2">Cron: 30 2 * * * UTC</p>
             </div>
 
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="text-18 font-bold text-gray-900">Run History</h2>
-                <p className="text-14 text-gray-600 mt-1">Last 5 scraper runs</p>
-              </div>
+            <div className="bg-white rounded-lg p-6 border border-gray-200">
+              <h3 className="text-14 font-semibold text-gray-900 mb-2">Current Status</h3>
+              <p className={`text-18 font-bold ${scraperRunning ? 'text-blue-600' : 'text-green-600'}`}>
+                {scraperRunning ? 'Running' : 'Active'}
+              </p>
+              <p className="text-13 text-gray-600 mt-1">Scraper is operational</p>
+              <p className="text-12 text-gray-500 mt-2">Last refresh: {formatIST(lastRefresh.toISOString())}</p>
+            </div>
+          </div>
 
-              {runs.length === 0 ? (
-                <div className="px-6 py-12 text-center">
-                  <p className="text-14 text-gray-500">No scraper runs recorded yet</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50 border-b border-gray-200">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-12 font-semibold text-gray-700 uppercase">Run ID</th>
-                        <th className="px-6 py-3 text-left text-12 font-semibold text-gray-700 uppercase">Status</th>
-                        <th className="px-6 py-3 text-left text-12 font-semibold text-gray-700 uppercase">Started</th>
-                        <th className="px-6 py-3 text-left text-12 font-semibold text-gray-700 uppercase">Duration</th>
-                        <th className="px-6 py-3 text-left text-12 font-semibold text-gray-700 uppercase">Items</th>
-                        <th className="px-6 py-3 text-left text-12 font-semibold text-gray-700 uppercase">Created</th>
-                        <th className="px-6 py-3 text-left text-12 font-semibold text-gray-700 uppercase">Skipped</th>
+          {/* Run History Table */}
+          <div className="bg-white rounded-lg shadow-md overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-16 font-bold text-gray-900">Run History</h3>
+              <p className="text-13 text-gray-600 mt-1">Last 10 scraper runs (all times in IST)</p>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-100 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-12 font-semibold text-gray-700 uppercase tracking-wide">Run ID</th>
+                    <th className="px-6 py-4 text-left text-12 font-semibold text-gray-700 uppercase tracking-wide">Status</th>
+                    <th className="px-6 py-4 text-left text-12 font-semibold text-gray-700 uppercase tracking-wide">Started (IST)</th>
+                    <th className="px-6 py-4 text-left text-12 font-semibold text-gray-700 uppercase tracking-wide">Duration</th>
+                    <th className="px-6 py-4 text-right text-12 font-semibold text-gray-700 uppercase tracking-wide">Fetched</th>
+                    <th className="px-6 py-4 text-right text-12 font-semibold text-gray-700 uppercase tracking-wide">Created</th>
+                    <th className="px-6 py-4 text-right text-12 font-semibold text-gray-700 uppercase tracking-wide">Skipped</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {runs && runs.length > 0 ? (
+                    runs.map((run, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50 transition">
+                        <td className="px-6 py-4 text-13 font-mono text-gray-900">{run.runId.slice(0, 8)}...</td>
+                        <td className="px-6 py-4 text-13">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-12 font-semibold ${
+                              run.status === 'completed'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}
+                          >
+                            {run.status === 'completed' ? '✓' : '✗'} {run.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-13 text-gray-700 font-mono">{formatIST(run.startedAt)}</td>
+                        <td className="px-6 py-4 text-13 text-gray-600">
+                          {run.durationSeconds < 60
+                            ? `${run.durationSeconds}s`
+                            : `${Math.floor(run.durationSeconds / 60)}m ${run.durationSeconds % 60}s`}
+                        </td>
+                        <td className="px-6 py-4 text-13 text-gray-700 text-right font-semibold">{run.itemsFetched}</td>
+                        <td className="px-6 py-4 text-13 text-green-600 text-right font-semibold">{run.trendsCreated}</td>
+                        <td className="px-6 py-4 text-13 text-orange-600 text-right font-semibold">{run.trendsSkipped}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {runs.map((run, idx) => (
-                        <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                          <td className="px-6 py-4 text-12 font-mono text-gray-900">{run.runId?.substring(0, 8)}...</td>
-                          <td className="px-6 py-4">{getStatusBadge(run.status)}</td>
-                          <td className="px-6 py-4 text-12 text-gray-600">{formatDate(run.startedAt)}</td>
-                          <td className="px-6 py-4 text-12 text-gray-600">{getDurationDisplay(run.durationSeconds)}</td>
-                          <td className="px-6 py-4 text-12 font-semibold text-gray-900">{run.itemsFetched || 0}</td>
-                          <td className="px-6 py-4 text-12 font-semibold text-green-600">{run.trendsCreated || 0}</td>
-                          <td className="px-6 py-4 text-12 font-semibold text-orange-600">{run.trendsSkipped || 0}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                        No scraper runs found
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
 
-            {runs.some(r => r.errorMessage) && (
-              <div className="mt-8 bg-red-50 rounded-lg p-6 border border-red-200">
-                <h3 className="text-16 font-bold text-red-900 mb-4">Error Log</h3>
-                <div className="space-y-3">
-                  {runs
-                    .filter(r => r.errorMessage)
-                    .map((run, idx) => (
-                      <div key={idx} className="text-12 text-red-700">
-                        <p className="font-semibold">{formatDate(run.startedAt)}</p>
-                        <p>{run.errorMessage}</p>
-                      </div>
-                    ))}
-                </div>
+            {runs && runs.length > 0 && runs[0].errorMessage && (
+              <div className="px-6 py-3 bg-yellow-50 border-t border-yellow-200">
+                <p className="text-12 text-yellow-800">
+                  <span className="font-semibold">Latest note:</span> {runs[0].errorMessage}
+                </p>
               </div>
             )}
-          </>
-        )}
+          </div>
+        </div>
       </div>
     </div>
   );
