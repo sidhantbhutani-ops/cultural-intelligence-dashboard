@@ -45,14 +45,24 @@ ${itemsText}`
     const content = response.content[0].type === 'text' ? response.content[0].text : '';
     console.log(`[Analyzer] Claude response length: ${content.length}, first 300 chars: ${content.substring(0, 300)}`);
     
-    const jsonMatch = content.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) {
-      console.warn('[Analyzer] No valid JSON found in Claude response');
-      console.log('[Analyzer] Full response:', content);
-      return [];
+    // Strip markdown code fence if present
+    let cleanedContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    
+    let trends = [];
+    try {
+      trends = JSON.parse(cleanedContent);
+    } catch (parseErr) {
+      console.warn(`[Analyzer] Failed to parse JSON directly: ${parseErr.message}`);
+      console.log('[Analyzer] Trying regex extraction on cleaned content');
+      const jsonMatch = cleanedContent.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) {
+        console.warn('[Analyzer] No valid JSON found in Claude response');
+        console.log('[Analyzer] Full cleaned response:', cleanedContent);
+        return [];
+      }
+      trends = JSON.parse(jsonMatch[0]);
     }
-
-    const trends = JSON.parse(jsonMatch[0]);
+    
     console.log(`[Analyzer] Extracted ${trends.length} trends from Claude`);
     return trends;
   } catch (err) {
