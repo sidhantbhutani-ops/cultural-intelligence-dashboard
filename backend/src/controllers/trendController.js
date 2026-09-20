@@ -6,17 +6,24 @@ async function getTrends(req, res, next) {
 
     let queryText = 'SELECT * FROM trends WHERE archived_at IS NULL';
     let params = [];
+    let paramCount = 1;
 
     if (category) {
-      queryText += ` AND category = '${category}'`;
+      queryText += ` AND category = $${paramCount}`;
+      params.push(category);
+      paramCount++;
     }
 
     if (source) {
-      queryText += ` AND source = '${source}'`;
+      queryText += ` AND source = $${paramCount}`;
+      params.push(source);
+      paramCount++;
     }
 
     if (search) {
-      queryText += ` AND (title ILIKE '%${search}%' OR description ILIKE '%${search}%')`;
+      queryText += ` AND (title ILIKE $${paramCount} OR description ILIKE $${paramCount})`;
+      params.push(`%${search}%`);
+      paramCount++;
     }
 
     if (sort === 'latest') {
@@ -27,7 +34,8 @@ async function getTrends(req, res, next) {
       queryText += ' ORDER BY created_at ASC';
     }
 
-    queryText += ` LIMIT ${limit} OFFSET ${offset}`;
+    queryText += ` LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
+    params.push(parseInt(limit), parseInt(offset));
 
     const result = await query(queryText, params);
     const trends = result.rows || [];
@@ -89,18 +97,25 @@ async function getArchive(req, res, next) {
     const { search, category, limit = 20, offset = 0 } = req.query;
 
     let queryText = 'SELECT * FROM trends WHERE archived_at IS NOT NULL';
+    let params = [];
+    let paramCount = 1;
 
     if (search) {
-      queryText += ` AND (title ILIKE '%${search}%' OR description ILIKE '%${search}%')`;
+      queryText += ` AND (title ILIKE $${paramCount} OR description ILIKE $${paramCount})`;
+      params.push(`%${search}%`);
+      paramCount++;
     }
 
     if (category) {
-      queryText += ` AND category = '${category}'`;
+      queryText += ` AND category = $${paramCount}`;
+      params.push(category);
+      paramCount++;
     }
 
-    queryText += ' ORDER BY archived_at DESC LIMIT ' + limit + ' OFFSET ' + offset;
+    queryText += ` ORDER BY archived_at DESC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
+    params.push(parseInt(limit), parseInt(offset));
 
-    const result = await query(queryText, []);
+    const result = await query(queryText, params);
     const trends = result.rows || [];
 
     res.json({
