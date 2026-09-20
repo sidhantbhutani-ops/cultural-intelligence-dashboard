@@ -12,6 +12,7 @@ const trendsRouter = require('./routes/trends');
 const adminRouter = require('./routes/admin');
 const scraperRouter = require('./routes/scraper');
 const collaborationRouter = require('./routes/collaborationRoutes');
+const teamRouter = require('./routes/team');
 
 const app = express();
 
@@ -28,31 +29,27 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// API Routes
+// Routes
 app.use('/api/auth', authRouter);
 app.use('/api/trends', trendsRouter);
 app.use('/api/scraper', scraperRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api', collaborationRouter);
+app.use('/api', teamRouter);
 
 // 404 Handler
 app.use((req, res) => {
   res.status(404).json({
     status: 'error',
-    code: 'NOT_FOUND',
-    message: 'Endpoint not found',
-    timestamp: new Date().toISOString(),
+    message: 'Route not found',
   });
 });
 
-// Error Handler
+// Error Handler Middleware
 app.use(errorHandler);
 
-// Start Server
-app.listen(port, () => {
-  console.log(`[Server] Listening on port ${port}`);
-  console.log(`[Server] Environment: ${process.env.NODE_ENV}`);
-  console.log(`[Server] API Health: http://localhost:${port}/api/health`);
+const server = app.listen(port, () => {
+  console.log(`Server is running on http://localhost:${port}`);
 });
 
-module.exports = app;
+module.exports = server;
