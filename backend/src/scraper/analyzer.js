@@ -8,31 +8,30 @@ const client = new Anthropic();
 async function analyzeContent(items) {
   try {
     const itemsText = items
-      .map((item, i) => `${i + 1}. Title: ${item.title}\nSource: ${item.source}\nURL: ${item.source_url}\nSummary: ${item.description || 'N/A'}`)
-      .join('\n\n');
+      .map((item, i) => `${i + 1}. ${item.title} (${item.source})`)
+      .join('\n');
 
     console.log(`[Analyzer] Sending ${items.length} items to Claude for analysis`);
 
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4000,
+      max_tokens: 3000,
       messages: [
         {
           role: 'user',
-          content: `You are a cultural trends analyst for Broadway, India's curated multi-brand experiential retail destination. Analyze these articles and extract the most significant pop culture and consumer culture trends.
+          content: `Extract 8-12 cultural trends from these articles. Return ONLY valid JSON array (no markdown, no text before/after).
 
-Return ONLY a valid JSON array. Use this exact structure with single-line descriptions (no newlines inside text fields):
 [
   {
     "title": "Trend name",
-    "description": "Why this trend matters for Indian consumers",
-    "source": "Source name",
-    "source_url": "URL",
-    "category": "pop-culture|movies|music|fashion|beauty|wellness|collectibles|sports|lifestyle",
-    "velocity": "emerging|peaking|declining",
-    "engagement_metric": 85,
-    "cultural_significance": "Brief impact explanation",
-    "angles": ["angle1", "angle2", "angle3"]
+    "description": "One sentence why it matters",
+    "source": "article source",
+    "source_url": "https://...",
+    "category": "fashion|music|pop-culture|lifestyle|wellness|beauty",
+    "velocity": "emerging",
+    "engagement_metric": 75,
+    "cultural_significance": "One sentence impact",
+    "angles": ["key1", "key2"]
   }
 ]
 
@@ -43,38 +42,21 @@ ${itemsText}`
     });
 
     let content = response.content[0].type === 'text' ? response.content[0].text : '';
-    console.log(`[Analyzer] Claude response length: ${content.length}`);
+    console.log(`[Analyzer] Response length: ${content.length}`);
     
-    // Remove markdown code fences
-    content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    content = content.replace(/```json/g, '').replace(/```/g, '').trim();
     
-    // Extract JSON array
     const jsonMatch = content.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
-      console.error('[Analyzer] No JSON array found in response');
+      console.error('[Analyzer] No JSON array found');
       return [];
     }
 
-    let jsonStr = jsonMatch[0];
-    
-    // Sanitize: Fix common JSON formatting issues
-    // Replace literal newlines with spaces in string values
-    jsonStr = jsonStr.replace(/:\s*"([^"]*\n[^"]*)"/g, (match) => {
-      return match.replace(/\n/g, ' ');
-    });
-
-    let trends = [];
-    try {
-      trends = JSON.parse(jsonStr);
-      console.log(`[Analyzer] Successfully parsed ${trends.length} trends from Claude`);
-      return trends;
-    } catch (parseErr) {
-      console.error(`[Analyzer] Failed to parse JSON: ${parseErr.message}`);
-      console.log('[Analyzer] JSON string (first 500 chars):', jsonStr.substring(0, 500));
-      return [];
-    }
+    const trends = JSON.parse(jsonMatch[0]);
+    console.log(`[Analyzer] Extracted ${trends.length} trends`);
+    return trends;
   } catch (err) {
-    console.error(`[Analyzer] Failed to analyze content: ${err.message}`);
+    console.error(`[Analyzer] Error: ${err.message}`);
     return [];
   }
 }
@@ -103,10 +85,10 @@ async function storeAnalyzedTrends(trends) {
       );
       trendIds.push(trendId);
     }
-    console.log(`[Analyzer] Stored ${trendIds.length} trends to database`);
+    console.log(`[Analyzer] Stored ${trendIds.length} trends`);
     return trendIds;
   } catch (err) {
-    console.error(`[Analyzer] Failed to store trends: ${err.message}`);
+    console.error(`[Analyzer] Store error: ${err.message}`);
     throw err;
   }
 }
