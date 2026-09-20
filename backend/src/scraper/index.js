@@ -83,7 +83,7 @@ class ScraperOrchestrator {
 
       if (allItems.length === 0) {
         console.warn('[Scraper] No items fetched from any source');
-        await this.logRun(runId, 'completed', 0, 0, 0, 'No items fetched', Date.now() - startTime, 0);
+        await this.logRun(runId, 'completed', 0, 0, 0, 'No items fetched', Date.now() - startTime, scrapedSourceNames, 0);
         return { success: true, storedTrends: [], duration: Date.now() - startTime };
       }
 
@@ -92,7 +92,7 @@ class ScraperOrchestrator {
 
       if (uniqueItems.length === 0) {
         console.info('[Scraper] All items were duplicates');
-        await this.logRun(runId, 'completed', allItems.length, 0, 0, 'All duplicates', Date.now() - startTime, 0);
+        await this.logRun(runId, 'completed', allItems.length, 0, 0, 'All duplicates', Date.now() - startTime, scrapedSourceNames, 0);
         return { success: true, storedTrends: [], duration: Date.now() - startTime };
       }
 
@@ -102,7 +102,7 @@ class ScraperOrchestrator {
 
       if (clusters.length === 0) {
         console.warn('[Scraper] No clusters formed from unique items');
-        await this.logRun(runId, 'completed', allItems.length, 0, uniqueItems.length, 'No clusters formed', Date.now() - startTime, 0);
+        await this.logRun(runId, 'completed', allItems.length, 0, uniqueItems.length, 'No clusters formed', Date.now() - startTime, scrapedSourceNames, 0);
         return { success: true, storedTrends: [], duration: Date.now() - startTime };
       }
 
@@ -111,7 +111,7 @@ class ScraperOrchestrator {
 
       if (analyzedTrends.length === 0) {
         console.warn('[Scraper] No trends were successfully analyzed');
-        await this.logRun(runId, 'completed', allItems.length, 0, uniqueItems.length, 'No trends analyzed', Date.now() - startTime, topicsFound);
+        await this.logRun(runId, 'completed', allItems.length, 0, uniqueItems.length, 'No trends analyzed', Date.now() - startTime, scrapedSourceNames, topicsFound);
         return { success: true, storedTrends: [], duration: Date.now() - startTime };
       }
 
@@ -170,7 +170,7 @@ class ScraperOrchestrator {
     } catch (err) {
       console.error(`[Scraper] ❌ Run failed: ${err.message}`);
       const duration = Date.now() - startTime;
-      await this.logRun(runId, 'failed', 0, 0, 0, err.message, duration, 0);
+      await this.logRun(runId, 'failed', 0, 0, 0, err.message, duration, scrapedSourceNames, 0);
       return { success: false, error: err.message, duration };
     }
   }
