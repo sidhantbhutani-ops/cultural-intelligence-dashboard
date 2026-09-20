@@ -16,8 +16,8 @@ async function getStatus(req, res) {
     const lastRuns = result.rows.map(row => ({
       runId: row.run_id,
       status: row.status,
-      startedAt: row.started_at,
-      completedAt: row.completed_at,
+      startedAt: row.started_at.endsWith('Z') ? row.started_at : row.started_at + 'Z',
+      completedAt: row.completed_at ? (row.completed_at.endsWith('Z') ? row.completed_at : row.completed_at + 'Z') : null,
       itemsFetched: row.trends_found,
       trendsCreated: row.trends_created,
       trendsSkipped: row.trends_skipped,
