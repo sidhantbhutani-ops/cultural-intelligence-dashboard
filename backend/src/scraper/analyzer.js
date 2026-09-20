@@ -21,19 +21,17 @@ async function analyzeContent(items) {
           role: 'user',
           content: `You are a cultural trends analyst for Broadway, India's curated multi-brand experiential retail destination. Analyze these articles and extract the most significant pop culture and consumer culture trends.
 
-IMPORTANT: Return ONLY valid JSON with properly escaped strings. No markdown, no code fences, no extra text.
-
-Use this exact structure:
+Return ONLY a valid JSON array. Use this exact structure with single-line descriptions (no newlines inside text fields):
 [
   {
     "title": "Trend name",
-    "description": "Why this trend matters for new-age Indian consumers",
-    "source": "Primary source name",
-    "source_url": "URL of primary article",
+    "description": "Why this trend matters for Indian consumers",
+    "source": "Source name",
+    "source_url": "URL",
     "category": "pop-culture|movies|music|fashion|beauty|wellness|collectibles|sports|lifestyle",
     "velocity": "emerging|peaking|declining",
     "engagement_metric": 85,
-    "cultural_significance": "Brief explanation of cultural impact",
+    "cultural_significance": "Brief impact explanation",
     "angles": ["angle1", "angle2", "angle3"]
   }
 ]
@@ -47,31 +45,33 @@ ${itemsText}`
     let content = response.content[0].type === 'text' ? response.content[0].text : '';
     console.log(`[Analyzer] Claude response length: ${content.length}`);
     
+    // Remove markdown code fences
     content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     
+    // Extract JSON array
+    const jsonMatch = content.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) {
+      console.error('[Analyzer] No JSON array found in response');
+      return [];
+    }
+
+    let jsonStr = jsonMatch[0];
+    
+    // Sanitize: Fix common JSON formatting issues
+    // Replace literal newlines with spaces in string values
+    jsonStr = jsonStr.replace(/:\s*"([^"]*\n[^"]*)"/g, (match) => {
+      return match.replace(/\n/g, ' ');
+    });
+
     let trends = [];
     try {
-      trends = JSON.parse(content);
+      trends = JSON.parse(jsonStr);
       console.log(`[Analyzer] Successfully parsed ${trends.length} trends from Claude`);
       return trends;
     } catch (parseErr) {
-      console.warn(`[Analyzer] JSON parse failed: ${parseErr.message}`);
-      
-      const jsonMatch = content.match(/\[[\s\S]*\]/);
-      if (!jsonMatch) {
-        console.error('[Analyzer] No JSON array found in response');
-        console.log('[Analyzer] Raw response:', content.substring(0, 500));
-        return [];
-      }
-      
-      try {
-        trends = JSON.parse(jsonMatch[0]);
-        console.log(`[Analyzer] Successfully parsed ${trends.length} trends from extracted JSON`);
-        return trends;
-      } catch (extractErr) {
-        console.error(`[Analyzer] Could not parse extracted JSON: ${extractErr.message}`);
-        return [];
-      }
+      console.error(`[Analyzer] Failed to parse JSON: ${parseErr.message}`);
+      console.log('[Analyzer] JSON string (first 500 chars):', jsonStr.substring(0, 500));
+      return [];
     }
   } catch (err) {
     console.error(`[Analyzer] Failed to analyze content: ${err.message}`);
