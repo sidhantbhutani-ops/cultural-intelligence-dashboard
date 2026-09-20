@@ -1,63 +1,21 @@
-const https = require('https');
+const { WebClient } = require('@slack/web-api');
 
-const sendSlackMessage = (channel, blocks) => {
-  return new Promise((resolve, reject) => {
-    const token = process.env.SLACK_BOT_TOKEN;
-    
-    if (!token || !channel) {
-      const err = `Missing Slack config: token=${!!token}, channel=${!!channel}`;
-      console.error('[Slack]', err);
-      return reject(new Error(err));
-    }
-    
-    const data = JSON.stringify({
+const sendSlackMessage = async (channel, blocks) => {
+  const token = process.env.SLACK_BOT_TOKEN;
+  const client = new WebClient(token);
+
+  try {
+    console.log(`[Slack] Sending message to channel: ${channel}`);
+    const result = await client.chat.postMessage({
       channel,
       blocks,
     });
-
-    const options = {
-      hostname: 'slack.com',
-      path: '/api/chat.postMessage',
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json; charset=utf-8',
-        'Content-Length': data.length,
-      },
-    };
-
-    console.log(`[Slack] Sending message to channel: ${channel}`);
-    
-    const req = https.request(options, (res) => {
-      let body = '';
-      res.on('data', chunk => body += chunk);
-      res.on('end', () => {
-        try {
-          const json = JSON.parse(body);
-          console.log('[Slack] Response:', JSON.stringify(json));
-          
-          if (json.ok) {
-            console.log('[Slack] Message sent successfully');
-            resolve(json);
-          } else {
-            console.error('[Slack] API error:', json.error);
-            reject(new Error(json.error || 'Slack API error'));
-          }
-        } catch (e) {
-          console.error('[Slack] Parse error:', e.message);
-          reject(e);
-        }
-      });
-    });
-
-    req.on('error', (err) => {
-      console.error('[Slack] Request error:', err.message);
-      reject(err);
-    });
-    
-    req.write(data);
-    req.end();
-  });
+    console.log('[Slack] Message sent successfully:', result.ts);
+    return result;
+  } catch (error) {
+    console.error('[Slack] Failed to send message:', error.message);
+    throw error;
+  }
 };
 
 const sendDailyTrendsReport = async (trends) => {
