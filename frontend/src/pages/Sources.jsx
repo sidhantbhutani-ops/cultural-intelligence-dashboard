@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
-import Button from '../components/Button';
-import Modal from '../components/Modal';
-import Toast from '../components/Toast';
-import Badge from '../components/Badge';
+import { Button } from '../components/Button';
+import { Modal } from '../components/Modal';
+import { Toast } from '../components/Toast';
+import { Badge } from '../components/Badge';
 
 export default function Sources() {
   const [sources, setSources] = useState([]);

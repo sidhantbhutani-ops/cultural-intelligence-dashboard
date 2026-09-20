@@ -4,7 +4,7 @@ import { Login } from './pages/Login';
 import { ActiveTrends } from './pages/ActiveTrends';
 import { Archive } from './pages/Archive';
 import { ScraperStatus } from './pages/ScraperStatus';
-import { Sources } from './pages/Sources';
+import Sources from './pages/Sources';
 import { Team } from './pages/Team';
 import { Nav } from './components/Nav';
 import { ToastContainer } from './components/Toast';
