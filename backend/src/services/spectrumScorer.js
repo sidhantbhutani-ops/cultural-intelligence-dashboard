@@ -11,28 +11,11 @@ Analyze this trend using the SPECTRUM framework — measuring cultural momentum 
 Each dimension has a max score:
 
 1. VELOCITY (0-25): How fast is Gen-Z in India adopting this right now?
-   - Week-over-week acceleration on social + IRL spaces
-   - Is adoption trending up or plateauing?
-
-2. CROSS-PLATFORM SPREAD (0-20): Multi-platform presence?
-   - Instagram, TikTok, Reddit, IRL spaces Gen-Z occupies
-   - More platforms = higher score
-
+2. CROSS-PLATFORM SPREAD (0-20): Multi-platform presence? (Instagram, TikTok, Reddit, IRL)
 3. NOVELTY (0-20): How new is this in Indian Gen-Z context?
-   - New relative to fashion/beauty/streetwear/wellness cycles
-   - Global trend already saturated = lower score
-
 4. COMMUNITY DEPTH (0-15): Is this real community or manufactured hype?
-   - Authentic subculture vs flash trend
-   - Genuine peer-to-peer vs influencer-driven = higher score
-
 5. COMMERCIAL ADOPTION (0-10): Can Broadway brands activate?
-   - Are brands in fashion/beauty/streetwear/wellness starting to tap this?
-   - Clear commercial angle = higher score
-
 6. CATEGORY RELEVANCE (0-10): Does this shift Gen-Z shopping behavior?
-   - Changes how people buy beauty/fashion/streetwear/wellness
-   - Pure cultural (no commerce impact) = lower score
 
 TREND DATA:
 Title: {title}
@@ -41,7 +24,7 @@ Category: {category}
 Source: {source}
 Editorial Angles: {angles}
 
-Respond ONLY with valid JSON (no markdown, no preamble, no extra text):
+Respond ONLY with valid JSON:
 {
   "velocity_score": <0-25>,
   "platform_score": <0-20>,
@@ -49,7 +32,7 @@ Respond ONLY with valid JSON (no markdown, no preamble, no extra text):
   "community_score": <0-15>,
   "adoption_score": <0-10>,
   "category_score": <0-10>,
-  "spectrum_insight": "<2-3 sentence explanation of score breakdown + why this matters for Broadway>"
+  "spectrum_insight": "<2-3 sentence explanation>"
 }`;
 
 async function scoreTrend(trend) {
@@ -69,7 +52,7 @@ async function scoreTrend(trend) {
       .replace('{source}', trend.source || 'Unknown')
       .replace('{angles}', angles);
 
-    console.log('[SPECTRUM Scorer] Calling Claude Sonnet for:', trend.title);
+    console.log(`[SPECTRUM] Scoring trend: ${trend.title.substring(0, 50)}`);
 
     const message = await client.messages.create({
       model: 'claude-sonnet-5',
@@ -82,11 +65,21 @@ async function scoreTrend(trend) {
       ]
     });
 
+    console.log(`[SPECTRUM] API Response received, content length: ${message.content.length}`);
+
+    if (!message.content || message.content.length === 0) {
+      throw new Error('Empty response from Claude API');
+    }
+
     const responseText = message.content[0].type === 'text' 
       ? message.content[0].text 
       : '';
 
-    console.log('[SPECTRUM Scorer] Raw response:', responseText.substring(0, 300));
+    console.log(`[SPECTRUM] Response text (first 200 chars): ${responseText.substring(0, 200)}`);
+
+    if (!responseText) {
+      throw new Error('Response text is empty');
+    }
 
     // Extract JSON robustly
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
@@ -116,19 +109,18 @@ async function scoreTrend(trend) {
       community_score: clamp(parsed.community_score, maxScores.community_score),
       adoption_score: clamp(parsed.adoption_score, maxScores.adoption_score),
       category_score: clamp(parsed.category_score, maxScores.category_score),
-      spectrum_insight: parsed.spectrum_insight || 'Emerging trend with Broadway potential'
+      spectrum_insight: parsed.spectrum_insight || 'Emerging trend'
     };
 
     // Calculate total
     result.total_score = result.velocity_score + result.platform_score + result.novelty_score + 
                          result.community_score + result.adoption_score + result.category_score;
 
-    console.log('[SPECTRUM Scorer] ✅ Scoring complete:', result.total_score, 'total');
+    console.log(`[SPECTRUM] ✅ Scored: ${result.total_score}/100 for "${trend.title.substring(0, 40)}"`);
     return result;
 
   } catch (error) {
-    console.error('[SPECTRUM Scorer] ❌ Error:', error.message);
-    console.error('[SPECTRUM Scorer] Trend:', trend.title);
+    console.error(`[SPECTRUM] ❌ Error scoring "${trend.title}":`, error.message);
     return {
       velocity_score: 0,
       platform_score: 0,
