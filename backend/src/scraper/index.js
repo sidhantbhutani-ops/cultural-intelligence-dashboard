@@ -84,8 +84,8 @@ async function storeAnalyzedTrends(trends, runId) {
   for (const trend of trends) {
     try {
       const { rows } = await supabase.query(
-        `INSERT INTO trends (title, source, source_url, description, category, angles, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `INSERT INTO trends (title, source, source_url, description, category, angles, happening, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          ON CONFLICT (source_url) DO NOTHING
          RETURNING id`,
         [
@@ -94,7 +94,232 @@ async function storeAnalyzedTrends(trends, runId) {
           trend.source_url,
           trend.description,
           trend.category,
-          trend.angles || [],
+          JSON.stringify(trend.angles || []),
+          'active',
+          new Date().toISOString(),
+        ]
+      );
+      const { rows } = await supabase.query(
+        `INSERT INTO trends (title, source, source_url, description, category, angles, happening, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (source_url) DO NOTHING
+         RETURNING id`,
+        [
+          trend.title,
+          trend.source,
+          trend.source_url,
+          trend.description,
+          trend.category,
+          JSON.stringify(trend.angles || []),
+          'active',
+          new Date().toISOString(),
+        ]
+      );
+      const { rows } = await supabase.query(
+        `INSERT INTO trends (title, source, source_url, description, category, angles, happening, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (source_url) DO NOTHING
+         RETURNING id`,
+        [
+          trend.title,
+          trend.source,
+          trend.source_url,
+          trend.description,
+          trend.category,
+          JSON.stringify(trend.angles || []),
+          'active',
+          new Date().toISOString(),
+        ]
+      );
+      const { rows } = await supabase.query(
+        `INSERT INTO trends (title, source, source_url, description, category, angles, happening, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (source_url) DO NOTHING
+         RETURNING id`,
+        [
+          trend.title,
+          trend.source,
+          trend.source_url,
+          trend.description,
+          trend.category,
+          JSON.stringify(trend.angles || []),
+          'active',
+          new Date().toISOString(),
+        ]
+      );
+      const { rows } = await supabase.query(
+        `INSERT INTO trends (title, source, source_url, description, category, angles, happening, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (source_url) DO NOTHING
+         RETURNING id`,
+        [
+          trend.title,
+          trend.source,
+          trend.source_url,
+          trend.description,
+          trend.category,
+          JSON.stringify(trend.angles || []),
+          'active',
+          new Date().toISOString(),
+        ]
+      );
+      const { rows } = await supabase.query(
+        `INSERT INTO trends (title, source, source_url, description, category, angles, happening, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (source_url) DO NOTHING
+         RETURNING id`,
+        [
+          trend.title,
+          trend.source,
+          trend.source_url,
+          trend.description,
+          trend.category,
+          JSON.stringify(trend.angles || []),
+          'active',
+          new Date().toISOString(),
+        ]
+      );
+      const { rows } = await supabase.query(
+        `INSERT INTO trends (title, source, source_url, description, category, angles, happening, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (source_url) DO NOTHING
+         RETURNING id`,
+        [
+          trend.title,
+          trend.source,
+          trend.source_url,
+          trend.description,
+          trend.category,
+          JSON.stringify(trend.angles || []),
+          'active',
+          new Date().toISOString(),
+        ]
+      );
+      const { rows } = await supabase.query(
+        `INSERT INTO trends (title, source, source_url, description, category, angles, happening, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (source_url) DO NOTHING
+         RETURNING id`,
+        [
+          trend.title,
+          trend.source,
+          trend.source_url,
+          trend.description,
+          trend.category,
+          JSON.stringify(trend.angles || []),
+          'active',
+          new Date().toISOString(),
+        ]
+      );
+      const { rows } = await supabase.query(
+        `INSERT INTO trends (title, source, source_url, description, category, angles, happening, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (source_url) DO NOTHING
+         RETURNING id`,
+        [
+          trend.title,
+          trend.source,
+          trend.source_url,
+          trend.description,
+          trend.category,
+          JSON.stringify(trend.angles || []),
+          'active',
+          new Date().toISOString(),
+        ]
+      );
+      const { rows } = await supabase.query(
+        `INSERT INTO trends (title, source, source_url, description, category, angles, happening, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (source_url) DO NOTHING
+         RETURNING id`,
+        [
+          trend.title,
+          trend.source,
+          trend.source_url,
+          trend.description,
+          trend.category,
+          JSON.stringify(trend.angles || []),
+          'active',
+          new Date().toISOString(),
+        ]
+      );
+      const { rows } = await supabase.query(
+        `INSERT INTO trends (title, source, source_url, description, category, angles, happening, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (source_url) DO NOTHING
+         RETURNING id`,
+        [
+          trend.title,
+          trend.source,
+          trend.source_url,
+          trend.description,
+          trend.category,
+          JSON.stringify(trend.angles || []),
+          'active',
+          new Date().toISOString(),
+        ]
+      );
+      const { rows } = await supabase.query(
+        `INSERT INTO trends (title, source, source_url, description, category, angles, happening, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (source_url) DO NOTHING
+         RETURNING id`,
+        [
+          trend.title,
+          trend.source,
+          trend.source_url,
+          trend.description,
+          trend.category,
+          JSON.stringify(trend.angles || []),
+          'active',
+          new Date().toISOString(),
+        ]
+      );
+      const { rows } = await supabase.query(
+        `INSERT INTO trends (title, source, source_url, description, category, angles, happening, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (source_url) DO NOTHING
+         RETURNING id`,
+        [
+          trend.title,
+          trend.source,
+          trend.source_url,
+          trend.description,
+          trend.category,
+          JSON.stringify(trend.angles || []),
+          'active',
+          new Date().toISOString(),
+        ]
+      );
+      const { rows } = await supabase.query(
+        `INSERT INTO trends (title, source, source_url, description, category, angles, happening, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (source_url) DO NOTHING
+         RETURNING id`,
+        [
+          trend.title,
+          trend.source,
+          trend.source_url,
+          trend.description,
+          trend.category,
+          JSON.stringify(trend.angles || []),
+          'active',
+          new Date().toISOString(),
+        ]
+      );
+      const { rows } = await supabase.query(
+        `INSERT INTO trends (title, source, source_url, description, category, angles, happening, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (source_url) DO NOTHING
+         RETURNING id`,
+        [
+          trend.title,
+          trend.source,
+          trend.source_url,
+          trend.description,
+          trend.category,
+          JSON.stringify(trend.angles || []),
+          'active',
           new Date().toISOString(),
         ]
       );
