@@ -7,9 +7,10 @@ const supabase = require('../config/supabase');
 
 async function runScraper(passedRunId) {
   const runId = passedRunId || `run_${Date.now()}`;
-  const startTime = new Date();
+  const startTime = Date.now();
   let totalItemsFetched = 0;
   let totalTrendsCreated = 0;
+  let errorMessage = null;
 
   try {
     console.log(`[${runId}] Starting scraper run...`);
@@ -53,6 +54,7 @@ async function runScraper(passedRunId) {
 
     if (allItems.length === 0) {
       console.warn(`[${runId}] No items fetched from any source`);
+      await logRun(runId, 'completed', 0, 0, 0, 'No items fetched', Date.now() - startTime);
       return { runId, success: true, itemsFetched: 0, trendsCreated: 0, storedTrends: [] };
     }
 
@@ -62,6 +64,11 @@ async function runScraper(passedRunId) {
     const uniqueItems = await dedupItems(allItems);
     console.log(`[${runId}] Deduplicated to ${uniqueItems.length} unique items`);
 
+    if (uniqueItems.length === 0) {
+      await logRun(runId, 'completed', allItems.length, 0, allItems.length, 'All duplicates', Date.now() - startTime);
+      return { runId, success: true, itemsFetched: totalItemsFetched, trendsCreated: 0, storedTrends: [] };
+    }
+
     // Analyze with Claude
     const analyzedTrends = await analyzeContent(uniqueItems);
     console.log(`[${runId}] Analyzed ${analyzedTrends.length} trends`);
@@ -69,11 +76,26 @@ async function runScraper(passedRunId) {
     // Store trends and auto-score
     totalTrendsCreated = await storeAnalyzedTrends(analyzedTrends, runId);
 
+    await logRun(runId, 'completed', totalItemsFetched, totalTrendsCreated, uniqueItems.length - totalTrendsCreated, null, Date.now() - startTime);
     console.log(`[${runId}] Scraper completed successfully`);
     return { runId, success: true, itemsFetched: totalItemsFetched, trendsCreated: totalTrendsCreated, storedTrends: analyzedTrends };
   } catch (error) {
     console.error(`[${runId}] Scraper failed:`, error.message);
+    await logRun(runId, 'failed', totalItemsFetched, totalTrendsCreated, 0, error.message, Date.now() - startTime);
     throw error;
+  }
+}
+
+async function logRun(runId, status, itemsFetched, trendsCreated, trendsSkipped, error, durationMs) {
+  try {
+    await supabase.query(
+      `INSERT INTO scraper_logs 
+       (run_id, status, trends_found, trends_created, trends_skipped, error_message, duration_seconds, started_at, completed_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
+      [runId, status, itemsFetched, trendsCreated, trendsSkipped, error, Math.ceil(durationMs / 1000)]
+    );
+  } catch (err) {
+    console.error(`[${runId}] Failed to log run: ${err.message}`);
   }
 }
 
