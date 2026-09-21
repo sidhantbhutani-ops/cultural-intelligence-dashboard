@@ -8,6 +8,7 @@ const { port } = require('./config/env');
 const loggerMiddleware = require('./middleware/logger');
 const errorHandler = require('./middleware/errorHandler');
 const { query } = require('./config/supabase');
+const { startDailyScheduler } = require('./services/dailyScheduler');
 
 // Routes
 const authRouter = require('./routes/auth');
@@ -38,36 +39,25 @@ app.use('/api/auth', authRouter);
 app.use('/api/trends', trendsRouter);
 app.use('/api/scraper', scraperRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/collaboration', collaborationRouter);
+app.use('/api/team', teamRouter);
 app.use('/api/scoring', scoringRouter);
-app.use('/api', collaborationRouter);
-app.use('/api', teamRouter);
 
-// 404 Handler
-app.use((req, res) => {
-  res.status(404).json({
-    status: 'error',
-    message: 'Route not found',
-  });
-});
-
-// Error Handler Middleware
+// Error Handler
 app.use(errorHandler);
 
-// Run migrations before starting server
+// Database Migrations
 async function runMigrations() {
   try {
-    console.log('[Server] Starting database migrations...');
-    const migrationsDir = path.join(__dirname, '../migrations');
-    const files = fs.readdirSync(migrationsDir)
-      .filter(f => f.endsWith('.sql'))
-      .sort();
+    const migrationsDir = path.join(__dirname, './migrations');
+    const files = fs.readdirSync(migrationsDir).sort();
+
+    console.log('[Migrations] Starting...');
 
     for (const file of files) {
-      const filePath = path.join(migrationsDir, file);
-      const sql = fs.readFileSync(filePath, 'utf8');
+      if (!file.endsWith('.sql')) continue;
 
-      if (!sql.trim()) continue;
-
+      const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
       console.log(`[Migration] Running ${file}...`);
 
       try {
@@ -94,6 +84,9 @@ runMigrations().then(() => {
   app.listen(port, () => {
     console.log(`🎭 Cultural Intelligence Dashboard running on port ${port}`);
     console.log(`📊 http://localhost:${port}`);
+    
+    // Start daily scheduler for Slack digest
+    startDailyScheduler();
   });
 });
 
