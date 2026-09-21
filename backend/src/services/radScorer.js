@@ -45,8 +45,7 @@ async function scoreTrend(trend) {
       .replace('{source}', trend.source || 'Unknown')
       .replace('{angles}', angles);
 
-    console.log('[RAD Scorer] Starting Claude API call for trend:', trend.id);
-    console.log('[RAD Scorer] API Key present:', !!process.env.ANTHROPIC_API_KEY);
+    console.log('[RAD Scorer] Calling Claude API for:', trend.title);
 
     const message = await client.messages.create({
       model: 'claude-3-5-sonnet-20241022',
@@ -63,9 +62,8 @@ async function scoreTrend(trend) {
       ? message.content[0].text 
       : '';
 
-    console.log('[RAD Scorer] Claude response:', responseText.substring(0, 100));
+    console.log('[RAD Scorer] Response preview:', responseText.substring(0, 150));
 
-    // Parse JSON response
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error(`No JSON in response: ${responseText}`);
@@ -73,15 +71,13 @@ async function scoreTrend(trend) {
 
     const scores = JSON.parse(jsonMatch[0]);
 
-    // Validate scores
     if (typeof scores.rare_score !== 'number' || 
         typeof scores.auth_score !== 'number' ||
         typeof scores.dis_score !== 'number' ||
         typeof scores.social_score !== 'number') {
-      throw new Error('Invalid score format: ' + JSON.stringify(scores));
+      throw new Error('Invalid score format');
     }
 
-    // Clamp scores to 0-25
     const clamp = (val) => Math.max(0, Math.min(25, Math.round(val)));
 
     const result = {
@@ -93,13 +89,11 @@ async function scoreTrend(trend) {
       total_score: clamp(scores.rare_score) + clamp(scores.auth_score) + clamp(scores.dis_score) + clamp(scores.social_score)
     };
 
-    console.log('[RAD Scorer] ✅ Scores calculated:', result);
+    console.log('[RAD Scorer] ✅ Scoring complete:', result.total_score, 'total');
     return result;
 
   } catch (error) {
     console.error('[RAD Scorer] ❌ Error:', error.message);
-    console.error('[RAD Scorer] Full error:', error);
-    // Return default scores on error
     return {
       rare_score: 0,
       auth_score: 0,
