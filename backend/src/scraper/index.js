@@ -16,7 +16,7 @@ async function runScraper(passedRunId) {
 
     // Insert scraper log entry
     const { error: logError } = await supabase.query(
-      `INSERT INTO scraper_logs (run_id, status, started_at, items_fetched, trends_created)
+      `INSERT INTO scraper_logs (run_id, status, started_at, trends_found, trends_created)
        VALUES ($1, $2, $3, $4, $5)`,
       [runId, 'running', startTime.toISOString(), 0, 0]
     );
@@ -51,6 +51,7 @@ async function runScraper(passedRunId) {
 
         totalItemsFetched += items.length;
         allItems.push(...items);
+        console.log(`[${runId}] Fetched ${items.length} items from ${source.name}`);
       } catch (error) {
         console.error(`[${runId}] Error fetching from ${source.name}:`, error.message);
       }
@@ -61,7 +62,7 @@ async function runScraper(passedRunId) {
     if (allItems.length === 0) {
       console.warn(`[${runId}] No items fetched from any source`);
       await supabase.query(
-        `UPDATE scraper_logs SET status = $1, completed_at = $2, items_fetched = $3, error_message = $4
+        `UPDATE scraper_logs SET status = $1, completed_at = $2, trends_found = $3, error_message = $4
          WHERE run_id = $5`,
         ['completed', new Date().toISOString(), 0, 'No items fetched', runId]
       );
@@ -86,7 +87,7 @@ async function runScraper(passedRunId) {
     const durationSeconds = Math.round((completedAt - startTime) / 1000);
 
     await supabase.query(
-      `UPDATE scraper_logs SET status = $1, completed_at = $2, items_fetched = $3, trends_created = $4, duration_seconds = $5
+      `UPDATE scraper_logs SET status = $1, completed_at = $2, trends_found = $3, trends_created = $4, duration_seconds = $5
        WHERE run_id = $6`,
       ['completed', completedAt.toISOString(), totalItemsFetched, totalTrendsCreated, durationSeconds, runId]
     );
