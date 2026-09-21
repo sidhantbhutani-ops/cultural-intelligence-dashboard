@@ -49,7 +49,7 @@ app.use(errorHandler);
 // Database Migrations
 async function runMigrations() {
   try {
-    const migrationsDir = path.join(__dirname, './migrations');
+    const migrationsDir = path.join(__dirname, '../migrations');
     const files = fs.readdirSync(migrationsDir).sort();
 
     console.log('[Migrations] Starting...');
