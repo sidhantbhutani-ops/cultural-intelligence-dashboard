@@ -14,14 +14,6 @@ async function runScraper(passedRunId) {
   try {
     console.log(`[${runId}] Starting scraper run...`);
 
-    // Insert scraper log entry
-    const { error: logError } = await supabase.query(
-      `INSERT INTO scraper_logs (run_id, status, started_at, trends_found, trends_created)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [runId, 'running', startTime.toISOString(), 0, 0]
-    );
-    if (logError) throw logError;
-
     // Fetch all active sources
     const { rows: sources } = await supabase.query(
       `SELECT * FROM scraper_sources WHERE is_active = true`
@@ -61,11 +53,6 @@ async function runScraper(passedRunId) {
 
     if (allItems.length === 0) {
       console.warn(`[${runId}] No items fetched from any source`);
-      await supabase.query(
-        `UPDATE scraper_logs SET status = $1, completed_at = $2, trends_found = $3, error_message = $4
-         WHERE run_id = $5`,
-        ['completed', new Date().toISOString(), 0, 'No items fetched', runId]
-      );
       return { runId, success: true, itemsFetched: 0, trendsCreated: 0, storedTrends: [] };
     }
 
@@ -82,24 +69,10 @@ async function runScraper(passedRunId) {
     // Store trends and auto-score
     totalTrendsCreated = await storeAnalyzedTrends(analyzedTrends, runId);
 
-    // Update scraper log
-    const completedAt = new Date();
-    const durationSeconds = Math.round((completedAt - startTime) / 1000);
-
-    await supabase.query(
-      `UPDATE scraper_logs SET status = $1, completed_at = $2, trends_found = $3, trends_created = $4, duration_seconds = $5
-       WHERE run_id = $6`,
-      ['completed', completedAt.toISOString(), totalItemsFetched, totalTrendsCreated, durationSeconds, runId]
-    );
-
     console.log(`[${runId}] Scraper completed successfully`);
     return { runId, success: true, itemsFetched: totalItemsFetched, trendsCreated: totalTrendsCreated, storedTrends: analyzedTrends };
   } catch (error) {
     console.error(`[${runId}] Scraper failed:`, error.message);
-    await supabase.query(
-      `UPDATE scraper_logs SET status = $1, completed_at = $2, error_message = $3 WHERE run_id = $4`,
-      ['failed', new Date().toISOString(), error.message, runId]
-    );
     throw error;
   }
 }
