@@ -2,7 +2,7 @@ const { fetchRss } = require('./fetchers/rss');
 const { fetchHtml } = require('./fetchers/html');
 const { fetchReddit } = require('./fetchers/reddit');
 const { dedupItems } = require('./deduplicator');
-const { analyzeItems } = require('./analyzer');
+const { analyzeContent } = require('./analyzer');
 const supabase = require('../config/supabase');
 
 async function runScraper(passedRunId) {
@@ -63,7 +63,7 @@ async function runScraper(passedRunId) {
     console.log(`[${runId}] Deduplicated to ${uniqueItems.length} unique items`);
 
     // Analyze with Claude
-    const analyzedTrends = await analyzeItems(uniqueItems);
+    const analyzedTrends = await analyzeContent(uniqueItems);
     console.log(`[${runId}] Analyzed ${analyzedTrends.length} trends`);
 
     // Store trends and auto-score
