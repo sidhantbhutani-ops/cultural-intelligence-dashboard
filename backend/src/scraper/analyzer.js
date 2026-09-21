@@ -44,15 +44,32 @@ ${itemsText}`
     let content = response.content[0].type === 'text' ? response.content[0].text : '';
     console.log(`[Analyzer] Response length: ${content.length}`);
     
-    content = content.replace(/```json/g, '').replace(/```/g, '').trim();
+    content = content.replace(/```json/g, "").replace(/```/g, "").trim();
     
-    const jsonMatch = content.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) {
-      console.error('[Analyzer] No JSON array found');
+    // Try to find and parse JSON array more carefully
+    let trends = [];
+    try {
+      // First, try to find a complete JSON array
+      const jsonMatch = content.match(/\[\s*\{[\s\S]*?\}\s*\]/);
+      if (jsonMatch) {
+        trends = JSON.parse(jsonMatch[0]);
+      } else {
+        // Fallback: try to extract from first [ to last ]
+        const simpleMatch = content.match(/\[[\s\S]*\]/);
+        if (simpleMatch) {
+          trends = JSON.parse(simpleMatch[0]);
+        }
+      }
+    } catch (parseErr) {
+      console.error(`[Analyzer] JSON parse failed: ${parseErr.message}`);
+      return [];
+    }
+    
+    if (!trends || trends.length === 0) {
+      console.error("[Analyzer] No trends extracted");
       return [];
     }
 
-    const trends = JSON.parse(jsonMatch[0]);
     console.log(`[Analyzer] Extracted ${trends.length} trends`);
     return trends;
   } catch (err) {
