@@ -37,4 +37,51 @@ router.post("/clear-trends", async (req, res) => {
   }
 });
 
+
+// Add SPECTRUM scoring columns to trends table
+router.post("/add-spectrum-columns", async (req, res) => {
+  try {
+    const supabase = require("../config/supabase");
+    const { query } = supabase;
+
+    const columns = [
+      { name: 'velocity_score', def: 'INTEGER DEFAULT 0' },
+      { name: 'platform_score', def: 'INTEGER DEFAULT 0' },
+      { name: 'novelty_score', def: 'INTEGER DEFAULT 0' },
+      { name: 'community_score', def: 'INTEGER DEFAULT 0' },
+      { name: 'adoption_score', def: 'INTEGER DEFAULT 0' },
+      { name: 'category_score', def: 'INTEGER DEFAULT 0' }
+    ];
+
+    const results = [];
+    for (const col of columns) {
+      try {
+        const sql = `ALTER TABLE trends ADD COLUMN ${col.name} ${col.def};`;
+        await query(sql);
+        results.push({ column: col.name, status: 'added' });
+        console.log(`✅ Added column: ${col.name}`);
+      } catch (err) {
+        if (err.message && err.message.includes('already exists')) {
+          results.push({ column: col.name, status: 'already_exists' });
+          console.log(`⚠️  Column ${col.name} already exists`);
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    res.json({ 
+      status: 'success', 
+      message: 'SPECTRUM columns processed',
+      results
+    });
+  } catch (error) {
+    console.error('Error adding SPECTRUM columns:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: error.message 
+    });
+  }
+});
+
 module.exports = router;
