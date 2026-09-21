@@ -92,7 +92,7 @@ async function storeAnalyzedTrends(trends) {
             trend.velocity,
             trend.engagement_metric,
             trend.cultural_significance,
-            trend.angles,
+            JSON.stringify(trend.angles),
             'active',
             new Date().toISOString()
           ]
