@@ -1,7 +1,7 @@
 const { fetchRss } = require('./fetchers/rss');
 const { fetchHtml } = require('./fetchers/html');
 const { fetchReddit } = require('./fetchers/reddit');
-const { deduplicateItems } = require('./deduplicator');
+const { dedupItems } = require('./deduplicator');
 const { analyzeItems } = require('./analyzer');
 const supabase = require('../config/supabase');
 
@@ -59,7 +59,7 @@ async function runScraper(passedRunId) {
     console.log(`[${runId}] Fetched ${allItems.length} total items`);
 
     // Deduplicate
-    const uniqueItems = deduplicateItems(allItems);
+    const uniqueItems = dedupItems(allItems);
     console.log(`[${runId}] Deduplicated to ${uniqueItems.length} unique items`);
 
     // Analyze with Claude
