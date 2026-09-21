@@ -31,18 +31,7 @@ export default function Sources() {
     try {
       setLoading(true);
       const response = await api('/admin/sources');
-      console.log('API Response:', response);
-      
-      // Handle different response structures
-      let sourcesArray = [];
-      if (Array.isArray(response)) {
-        sourcesArray = response;
-      } else if (response && response.data && Array.isArray(response.data)) {
-        sourcesArray = response.data;
-      } else if (response && response.sources && Array.isArray(response.sources)) {
-        sourcesArray = response.sources;
-      }
-      
+      const sourcesArray = response.data?.sources || [];
       setSources(sourcesArray);
     } catch (error) {
       setToast({ type: 'error', message: 'Failed to fetch sources' });
