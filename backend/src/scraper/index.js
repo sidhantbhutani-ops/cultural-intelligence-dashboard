@@ -59,7 +59,7 @@ async function runScraper(passedRunId) {
     console.log(`[${runId}] Fetched ${allItems.length} total items`);
 
     // Deduplicate
-    const uniqueItems = dedupItems(allItems);
+    const uniqueItems = await dedupItems(allItems);
     console.log(`[${runId}] Deduplicated to ${uniqueItems.length} unique items`);
 
     // Analyze with Claude
