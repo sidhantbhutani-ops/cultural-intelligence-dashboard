@@ -1,4 +1,5 @@
 const Anthropic = require('@anthropic-ai/sdk');
+const { query } = require('../config/supabase');
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY
@@ -81,7 +82,6 @@ async function scoreTrend(trend) {
       throw new Error('Response text is empty');
     }
 
-    // Extract JSON robustly
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error(`No JSON found in response: ${responseText}`);
@@ -89,7 +89,6 @@ async function scoreTrend(trend) {
 
     const parsed = JSON.parse(jsonMatch[0]);
     
-    // Define max scores per dimension
     const maxScores = {
       velocity_score: 25,
       platform_score: 20,
@@ -99,7 +98,6 @@ async function scoreTrend(trend) {
       category_score: 10
     };
 
-    // Clamp each score to its max
     const clamp = (val, max) => Math.max(0, Math.min(max, Math.round(val)));
 
     const result = {
@@ -112,11 +110,16 @@ async function scoreTrend(trend) {
       spectrum_insight: parsed.spectrum_insight || 'Emerging trend'
     };
 
-    // Calculate total
     result.total_score = result.velocity_score + result.platform_score + result.novelty_score + 
                          result.community_score + result.adoption_score + result.category_score;
 
     console.log(`[SPECTRUM] ✅ Scored: ${result.total_score}/100 for "${trend.title.substring(0, 40)}"`);
+    
+    // Update database with scores
+    if (trend.id) {
+      await updateTrendScores(trend.id, result);
+    }
+    
     return result;
 
   } catch (error) {
@@ -135,4 +138,34 @@ async function scoreTrend(trend) {
   }
 }
 
-module.exports = { scoreTrend };
+async function updateTrendScores(trendId, scores) {
+  try {
+    await query(
+      `UPDATE trends 
+       SET velocity_score = $1, 
+           platform_score = $2, 
+           novelty_score = $3, 
+           community_score = $4, 
+           adoption_score = $5, 
+           category_score = $6,
+           spectrum_insight = $7
+       WHERE id = $8`,
+      [
+        scores.velocity_score,
+        scores.platform_score,
+        scores.novelty_score,
+        scores.community_score,
+        scores.adoption_score,
+        scores.category_score,
+        scores.spectrum_insight,
+        trendId
+      ]
+    );
+    
+    console.log(`[SPECTRUM] ✅ Updated DB for trend ${trendId}`);
+  } catch (error) {
+    console.error(`[SPECTRUM] Failed to update scores for trend ${trendId}:`, error.message);
+  }
+}
+
+module.exports = { scoreTrend, updateTrendScores };
