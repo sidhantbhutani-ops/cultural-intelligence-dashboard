@@ -16,6 +16,7 @@ const adminRouter = require('./routes/admin');
 const scraperRouter = require('./routes/scraper');
 const collaborationRouter = require('./routes/collaborationRoutes');
 const teamRouter = require('./routes/team');
+const scoringRouter = require('./routes/scoring');
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/trends', trendsRouter);
 app.use('/api/scraper', scraperRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/scoring', scoringRouter);
 app.use('/api', collaborationRouter);
 app.use('/api', teamRouter);
 
@@ -63,34 +65,36 @@ async function runMigrations() {
     for (const file of files) {
       const filePath = path.join(migrationsDir, file);
       const sql = fs.readFileSync(filePath, 'utf8');
+
+      if (!sql.trim()) continue;
+
+      console.log(`[Migration] Running ${file}...`);
+
       try {
-        console.log(`[Server] Running migration: ${file}...`);
         await query(sql);
-        console.log(`[Server] ✓ ${file} completed`);
-      } catch (error) {
-        console.warn(`[Server] Migration ${file} already applied or skipped: ${error.message}`);
+        console.log(`[Migration] ✅ ${file}`);
+      } catch (err) {
+        if (err.message.includes('already exists') || err.message.includes('duplicate key')) {
+          console.log(`[Migration] ⚠️  ${file} (already applied)`);
+        } else {
+          throw err;
+        }
       }
     }
-    console.log('[Server] Migrations completed');
+
+    console.log('[Migrations] All migrations completed');
   } catch (err) {
-    console.error('[Server] Migration error:', err.message);
+    console.error('[Migrations] Error:', err.message);
+    process.exit(1);
   }
 }
 
-// Start server
-async function startServer() {
-  await runMigrations();
-  
-  const server = app.listen(port, () => {
-    console.log(`[Server] ✅ Running on http://localhost:${port}`);
+// Start Server
+runMigrations().then(() => {
+  app.listen(port, () => {
+    console.log(`🎭 Cultural Intelligence Dashboard running on port ${port}`);
+    console.log(`📊 http://localhost:${port}`);
   });
-
-  return server;
-}
-
-startServer().catch(err => {
-  console.error('[Server] Fatal startup error:', err);
-  process.exit(1);
 });
 
 module.exports = app;
