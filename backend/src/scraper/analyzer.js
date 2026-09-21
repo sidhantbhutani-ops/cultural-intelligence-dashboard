@@ -1,14 +1,12 @@
-const { query } = require('../config/supabase.js');
-const { v4: uuidv4 } = require('uuid');
 const Anthropic = require('@anthropic-ai/sdk');
-const { scoreTrend } = require('../services/radScorer');
 
 const client = new Anthropic();
 
 async function analyzeContent(items) {
   try {
+    // Create item list with source_url included
     const itemsText = items
-      .map((item, i) => `${i + 1}. ${item.title} (${item.source})`)
+      .map((item, i) => `${i + 1}. "${item.title}" (${item.source}) - ${item.source_url}`)
       .join('\n');
 
     console.log(`[Analyzer] Sending ${items.length} items to Claude for analysis`);
@@ -26,10 +24,8 @@ async function analyzeContent(items) {
     "title": "Trend name",
     "description": "One sentence why it matters",
     "source": "article source",
-    "source_url": "https://...",
+    "source_url": "https://exact.url.from.articles.above",
     "category": "fashion|music|pop-culture|lifestyle|wellness|beauty",
-    "velocity": "emerging|established",
-    "engagement_metric": 75,
     "cultural_significance": "Brief impact explanation",
     "angles": ["Specific UGC/content hook #1", "Brand collaboration angle", "Content series idea"]
   }
@@ -64,98 +60,32 @@ ${itemsText}`
       console.error(`[Analyzer] JSON parse failed: ${parseErr.message}`);
       return [];
     }
-    
+
     if (!trends || trends.length === 0) {
       console.error("[Analyzer] No trends extracted");
       return [];
     }
 
-    console.log(`[Analyzer] Extracted ${trends.length} trends`);
-    return trends;
+    // Map Claude's response trends back to original items to ensure source_url is correct
+    const enrichedTrends = trends.map(trend => {
+      // Find matching item by title similarity
+      const matchingItem = items.find(item => 
+        item.title.toLowerCase().includes(trend.title.toLowerCase().substring(0, 20)) ||
+        trend.title.toLowerCase().includes(item.title.toLowerCase().substring(0, 20))
+      );
+      
+      return {
+        ...trend,
+        source_url: matchingItem?.source_url || trend.source_url,
+      };
+    });
+
+    console.log(`[Analyzer] Extracted ${enrichedTrends.length} trends`);
+    return enrichedTrends;
   } catch (err) {
     console.error(`[Analyzer] Error: ${err.message}`);
     return [];
   }
 }
 
-async function storeAnalyzedTrends(trends) {
-  try {
-    console.log(`[Analyzer] Starting to store ${trends.length} trends...`);
-    let storedCount = 0;
-    let scoringQueued = 0;
-    
-    for (let i = 0; i < trends.length; i++) {
-      const trend = trends[i];
-      const trendId = uuidv4();
-      
-      try {
-        const insertResult = await query(
-          `INSERT INTO trends (id, title, description, source, source_url, category, velocity, engagement_metric, cultural_significance, angles, happening, created_at) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-           ON CONFLICT (source_url) DO UPDATE SET 
-             title = EXCLUDED.title,
-             description = EXCLUDED.description,
-             cultural_significance = EXCLUDED.cultural_significance,
-             angles = EXCLUDED.angles,
-             updated_at = NOW()
-           RETURNING id`,
-          [
-            trendId,
-            trend.title,
-            trend.description,
-            trend.source,
-            trend.source_url,
-            trend.category,
-            trend.velocity,
-            trend.engagement_metric,
-            trend.cultural_significance,
-            JSON.stringify(trend.angles),
-            'active',
-            new Date().toISOString()
-          ]
-        );
-        
-        storedCount++;
-        const returnedId = insertResult.rows[0].id;
-        
-        // Auto-score the trend immediately after insertion (async, non-blocking)
-        scoringQueued++;
-        scoreTrend(trend)
-          .then(async (scores) => {
-            try {
-              await query(
-                `UPDATE trends 
-                 SET rare_score = $1, auth_score = $2, dis_score = $3, social_score = $4, editorial_insight = $5
-                 WHERE id = $6`,
-                [
-                  scores.rare_score,
-                  scores.auth_score,
-                  scores.dis_score,
-                  scores.social_score,
-                  scores.editorial_insight,
-                  returnedId
-                ]
-              );
-              console.log(`[Analyzer] ✓ Auto-scored "${trend.title}" → RAD: ${scores.total_score}`);
-            } catch (updateErr) {
-              console.warn(`[Analyzer] Failed to update scores for ${returnedId}: ${updateErr.message}`);
-            }
-          })
-          .catch((scoreErr) => {
-            console.warn(`[Analyzer] Scoring failed for "${trend.title}": ${scoreErr.message}`);
-          });
-        
-      } catch (insertErr) {
-        console.error(`[Analyzer] INSERT failed for "${trend.title}": ${insertErr.message}`);
-      }
-    }
-    
-    console.log(`[Analyzer] Stored ${storedCount}/${trends.length} trends (${scoringQueued} scoring jobs queued)`);
-    return storedCount;
-  } catch (err) {
-    console.error(`[Analyzer] Store error: ${err.message}`);
-    throw err;
-  }
-}
-
-module.exports = { analyzeContent, storeAnalyzedTrends };
+module.exports = { analyzeContent };
