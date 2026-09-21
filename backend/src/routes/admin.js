@@ -27,11 +27,11 @@ router.delete('/sources/:id', deleteSource);
 router.post("/clear-trends", async (req, res) => {
   try {
     const supabase = require("../config/supabase");
-    const { error } = await supabase.from("trends").delete().gte("created_at", "1900-01-01");
+    const { rows, error } = await supabase.query("DELETE FROM trends WHERE created_at IS NOT NULL RETURNING id");
     
     if (error) throw error;
     
-    res.json({ status: "success", message: "All trends deleted" });
+    res.json({ status: "success", message: `All trends deleted (${rows?.length || 0} removed)` });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
