@@ -101,7 +101,7 @@ async function logRun(runId, status, itemsFetched, trendsCreated, trendsSkipped,
 
 async function storeAnalyzedTrends(trends, runId) {
   let createdCount = 0;
-  const { scoreTrend } = require('../services/spectrumScorer');
+  const { scoreTrend } = require('../services/radScorer');
 
   for (const trend of trends) {
     try {

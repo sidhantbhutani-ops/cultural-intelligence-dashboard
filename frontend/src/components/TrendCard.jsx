@@ -8,7 +8,10 @@ export const TrendCard = ({ trend, onClick }) => {
     'established': 'success',
   };
 
-  const totalRAD = (trend.rare_score || 0) + (trend.auth_score || 0) + (trend.dis_score || 0) + (trend.social_score || 0);
+  // Calculate SPECTRUM total score
+  const totalSpectrum = (trend.velocity_score || 0) + (trend.platform_score || 0) + 
+                        (trend.novelty_score || 0) + (trend.community_score || 0) + 
+                        (trend.adoption_score || 0) + (trend.category_score || 0);
 
   // Mock Broadway category mapping (will be replaced with real mapping)
   const broadwayBrands = {
@@ -20,12 +23,22 @@ export const TrendCard = ({ trend, onClick }) => {
 
   const relevantBrands = broadwayBrands[trend.category] || [];
 
+  // SPECTRUM dimensions with their max scores
+  const spectrumDimensions = [
+    { key: 'velocity_score', label: 'Velocity', max: 25, color: 'bg-red-500' },
+    { key: 'platform_score', label: 'Platform Spread', max: 20, color: 'bg-orange-500' },
+    { key: 'novelty_score', label: 'Novelty', max: 20, color: 'bg-yellow-500' },
+    { key: 'community_score', label: 'Community', max: 15, color: 'bg-green-500' },
+    { key: 'adoption_score', label: 'Adoption', max: 10, color: 'bg-blue-500' },
+    { key: 'category_score', label: 'Category', max: 10, color: 'bg-purple-500' },
+  ];
+
   return (
     <div 
       onClick={onClick}
       className="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-all cursor-pointer bg-white"
     >
-      {/* Header with RAD Score */}
+      {/* Header with SPECTRUM Score */}
       <div className="flex justify-between items-start mb-4">
         <div className="flex-1">
           <h3 className="text-18 font-bold text-gray-900 mb-2">{trend.title}</h3>
@@ -45,11 +58,11 @@ export const TrendCard = ({ trend, onClick }) => {
           <Badge variant="primary" size="sm" className="mb-3">{trend.category}</Badge>
         </div>
         
-        {/* RAD Score */}
+        {/* SPECTRUM Score */}
         <div className="text-right">
-          <div className="text-32 font-bold text-blue-600">{totalRAD}</div>
-          <div className="text-11 text-gray-500 font-medium">RAD Score</div>
-          {totalRAD === 0 && <div className="text-10 text-gray-400">(Pending)</div>}
+          <div className="text-32 font-bold text-indigo-600">{totalSpectrum}</div>
+          <div className="text-11 text-gray-500 font-medium">SPECTRUM Score</div>
+          {totalSpectrum === 0 && <div className="text-10 text-gray-400">(Pending)</div>}
         </div>
       </div>
 
@@ -65,99 +78,52 @@ export const TrendCard = ({ trend, onClick }) => {
         </div>
       )}
 
-      {/* RAD Score Bars (only show if scores exist) */}
-      {totalRAD > 0 && (
-        <div className="grid grid-cols-4 gap-2 mb-4">
-          <div>
-            <div className="flex items-end justify-between mb-1">
-              <span className="text-10 font-medium text-gray-600">Rare</span>
-              <span className="text-10 font-bold">{trend.rare_score || 0}</span>
-            </div>
-            <div className="w-full h-6 bg-gray-100 rounded overflow-hidden">
-              <div 
-                className="h-full bg-purple-500"
-                style={{ width: `${((trend.rare_score || 0) / 25) * 100}%` }}
-              />
-            </div>
-          </div>
-          <div>
-            <div className="flex items-end justify-between mb-1">
-              <span className="text-10 font-medium text-gray-600">Auth</span>
-              <span className="text-10 font-bold">{trend.auth_score || 0}</span>
-            </div>
-            <div className="w-full h-6 bg-gray-100 rounded overflow-hidden">
-              <div 
-                className="h-full bg-green-500"
-                style={{ width: `${((trend.auth_score || 0) / 25) * 100}%` }}
-              />
-            </div>
-          </div>
-          <div>
-            <div className="flex items-end justify-between mb-1">
-              <span className="text-10 font-medium text-gray-600">Dis</span>
-              <span className="text-10 font-bold">{trend.dis_score || 0}</span>
-            </div>
-            <div className="w-full h-6 bg-gray-100 rounded overflow-hidden">
-              <div 
-                className="h-full bg-orange-500"
-                style={{ width: `${((trend.dis_score || 0) / 25) * 100}%` }}
-              />
-            </div>
-          </div>
-          <div>
-            <div className="flex items-end justify-between mb-1">
-              <span className="text-10 font-medium text-gray-600">Social</span>
-              <span className="text-10 font-bold">{trend.social_score || 0}</span>
-            </div>
-            <div className="w-full h-6 bg-gray-100 rounded overflow-hidden">
-              <div 
-                className="h-full bg-red-500"
-                style={{ width: `${((trend.social_score || 0) / 25) * 100}%` }}
-              />
-            </div>
-          </div>
+      {/* SPECTRUM Insight */}
+      {trend.spectrum_insight && totalSpectrum > 0 && (
+        <div className="bg-indigo-50 border-l-4 border-indigo-400 p-3 mb-4 rounded">
+          <p className="text-12 text-indigo-900">{trend.spectrum_insight}</p>
         </div>
       )}
 
-      {/* Velocity Badge */}
-      <div className="mb-4">
-        <Badge variant={velocityColors[trend.velocity] || 'primary'} size="sm">
-          {trend.velocity?.charAt(0).toUpperCase() + trend.velocity?.slice(1)}
-        </Badge>
-      </div>
-
-      {/* Editorial Angles */}
-      <div className="mb-4">
-        <p className="text-12 font-semibold text-gray-700 mb-2">Editorial Angles:</p>
-        <div className="space-y-2">
-          {trend.angles && trend.angles.map((angle, i) => (
-            <div key={i} className="flex gap-2 text-13 text-gray-700">
-              <span className="text-blue-500 font-bold">•</span>
-              <span>{angle}</span>
+      {/* SPECTRUM Score Bars (6 dimensions) */}
+      {totalSpectrum > 0 && (
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          {spectrumDimensions.map((dim) => (
+            <div key={dim.key}>
+              <div className="flex items-end justify-between mb-1">
+                <span className="text-10 font-medium text-gray-600">{dim.label}</span>
+                <span className="text-10 font-bold">{trend[dim.key] || 0}/{dim.max}</span>
+              </div>
+              <div className="w-full h-5 bg-gray-100 rounded overflow-hidden">
+                <div 
+                  className={dim.color}
+                  style={{ width: `${((trend[dim.key] || 0) / dim.max) * 100}%` }}
+                />
+              </div>
             </div>
           ))}
         </div>
-      </div>
+      )}
 
-      {/* Broadway Brands */}
-      {relevantBrands.length > 0 && (
+      {/* Editorial Angles */}
+      {trend.angles && trend.angles.length > 0 && (
         <div className="mb-4">
-          <p className="text-12 font-semibold text-gray-700 mb-2">Relevant Broadway Brands:</p>
-          <div className="flex gap-2 flex-wrap">
-            {relevantBrands.slice(0, 4).map((brand, i) => (
-              <Badge key={i} variant="secondary" size="sm">{brand}</Badge>
+          <p className="text-11 font-semibold text-gray-600 mb-2">Editorial Angles:</p>
+          <ul className="text-12 text-gray-700 space-y-1">
+            {trend.angles.map((angle, idx) => (
+              <li key={idx} className="flex gap-2">
+                <span className="text-gray-400">•</span>
+                <span>{angle}</span>
+              </li>
             ))}
-            {relevantBrands.length > 4 && (
-              <Badge variant="secondary" size="sm">+{relevantBrands.length - 4} more</Badge>
-            )}
-          </div>
+          </ul>
         </div>
       )}
 
-      {/* Footer */}
-      <div className="flex justify-between items-center text-12 text-gray-500 pt-4 border-t border-gray-100">
-        <span>{trend.happening === 'active' ? '🔴 Live' : '⚪ Archive'}</span>
-        <span className="text-blue-500 font-medium">Click to view details →</span>
+      {/* Status Indicator */}
+      <div className="flex items-center gap-2 text-10 text-gray-500">
+        <span className="inline-block w-2 h-2 bg-green-500 rounded-full"></span>
+        Live
       </div>
     </div>
   );
