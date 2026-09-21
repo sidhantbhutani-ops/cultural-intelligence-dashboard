@@ -1,7 +1,6 @@
 const { query } = require('../config/supabase.js');
 const { v4: uuidv4 } = require('uuid');
 const Anthropic = require('@anthropic-ai/sdk');
-const { scoreTrendWithRAD } = require('../services/trendScoringService.js');
 
 const client = new Anthropic();
 
@@ -30,8 +29,8 @@ async function analyzeContent(items) {
     "category": "fashion|music|pop-culture|lifestyle|wellness|beauty",
     "velocity": "emerging",
     "engagement_metric": 75,
-    "cultural_significance": "One sentence impact",
-    "angles": ["key1", "key2"]
+    "cultural_significance": "Brief impact explanation",
+    "angles": ["angle1", "angle2"]
   }
 ]
 
@@ -63,31 +62,47 @@ ${itemsText}`
 
 async function storeAnalyzedTrends(trends) {
   try {
-    const trendIds = [];
-    for (const trend of trends) {
+    console.log(`[Analyzer] Starting to store ${trends.length} trends...`);
+    let storedCount = 0;
+    
+    for (let i = 0; i < trends.length; i++) {
+      const trend = trends[i];
       const trendId = uuidv4();
-      await query(
-        `INSERT INTO trends (id, title, description, source, source_url, category, velocity, engagement_metric, cultural_significance, angles, happening, created_at) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-        [
-          trendId,
-          trend.title,
-          trend.description,
-          trend.source,
-          trend.source_url,
-          trend.category,
-          trend.velocity,
-          trend.engagement_metric,
-          trend.cultural_significance,
-          trend.angles,
-          'active',
-          new Date().toISOString()
-        ]
-      );
-      trendIds.push(trendId);
+      
+      try {
+        await query(
+          `INSERT INTO trends (id, title, description, source, source_url, category, velocity, engagement_metric, cultural_significance, angles, happening, created_at) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+           ON CONFLICT (source_url) DO UPDATE SET 
+             title = EXCLUDED.title,
+             description = EXCLUDED.description,
+             cultural_significance = EXCLUDED.cultural_significance,
+             angles = EXCLUDED.angles,
+             updated_at = NOW()
+           RETURNING id`,
+          [
+            trendId,
+            trend.title,
+            trend.description,
+            trend.source,
+            trend.source_url,
+            trend.category,
+            trend.velocity,
+            trend.engagement_metric,
+            trend.cultural_significance,
+            trend.angles,
+            'active',
+            new Date().toISOString()
+          ]
+        );
+        storedCount++;
+      } catch (insertErr) {
+        console.error(`[Analyzer] INSERT failed for "${trend.title}": ${insertErr.message}`);
+      }
     }
-    console.log(`[Analyzer] Stored ${trendIds.length} trends`);
-    return trendIds;
+    
+    console.log(`[Analyzer] Stored ${storedCount}/${trends.length} trends`);
+    return storedCount;
   } catch (err) {
     console.error(`[Analyzer] Store error: ${err.message}`);
     throw err;
