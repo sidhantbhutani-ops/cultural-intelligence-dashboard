@@ -68,6 +68,13 @@ export const ActiveTrends = () => {
       filtered = filtered.filter(t => t.velocity === selectedVelocity);
     }
 
+    // Sort by RAD score descending
+    filtered.sort((a, b) => {
+      const aRAD = (a.rare_score || 0) + (a.auth_score || 0) + (a.dis_score || 0) + (a.social_score || 0);
+      const bRAD = (b.rare_score || 0) + (b.auth_score || 0) + (b.dis_score || 0) + (b.social_score || 0);
+      return bRAD - aRAD;
+    });
+
     setFilteredTrends(filtered);
   }, [searchTerm, selectedCategory, selectedVelocity, trends]);
 
@@ -141,30 +148,13 @@ export const ActiveTrends = () => {
           <p className="text-14 text-gray-600">No trends found</p>
         </div>
       ) : (
-        <div className="grid gap-6">
+        <div className="grid gap-4">
           {filteredTrends.map(trend => (
-            <div
+            <TrendCard 
               key={trend.id}
+              trend={trend}
               onClick={() => handleTrendClick(trend)}
-              className="cursor-pointer bg-white rounded-lg p-6 border border-gray-200 hover:shadow-lg transition-shadow"
-            >
-              <div className="flex justify-between items-start mb-3">
-                <div className="flex-1">
-                  <h3 className="text-16 font-bold text-gray-900">{trend.title}</h3>
-                  <p className="text-13 text-gray-600 mt-1">{trend.source}</p>
-                </div>
-                {trend.assigned_to && (
-                  <div className="bg-blue-50 px-3 py-1 rounded-full">
-                    <span className="text-12 font-semibold text-blue-700">{teamMembers[trend.assigned_to] || 'Assigned'}</span>
-                  </div>
-                )}
-              </div>
-              <p className="text-14 text-gray-700 line-clamp-2">{trend.description}</p>
-              <div className="flex gap-2 mt-4">
-                <span className="px-2 py-1 bg-gray-100 text-12 font-semibold text-gray-700 rounded">{trend.category}</span>
-                <span className="px-2 py-1 bg-gray-100 text-12 font-semibold text-gray-700 rounded">{trend.velocity}</span>
-              </div>
-            </div>
+            />
           ))}
         </div>
       )}
