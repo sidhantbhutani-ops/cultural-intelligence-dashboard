@@ -39,7 +39,7 @@ async function dedupItems(items) {
   const unique = [];
 
   for (const item of items) {
-    const dup = await isDuplicate(item.title, item.url, item.source);
+    const dup = await isDuplicate(item.title, item.source_url, item.source);
     if (!dup) {
       unique.push(item);
     }
