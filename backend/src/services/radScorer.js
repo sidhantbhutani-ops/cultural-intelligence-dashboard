@@ -1,6 +1,8 @@
 const Anthropic = require('@anthropic-ai/sdk');
 
-const client = new Anthropic();
+const client = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY
+});
 
 const RAD_PROMPT = `You are a cultural trend analyst for Broadway, an experiential retail destination in India featuring 200+ new-age brands (fashion, beauty, streetwear, sneakers, wellness, lab-grown diamonds).
 
@@ -43,7 +45,8 @@ async function scoreTrend(trend) {
       .replace('{source}', trend.source || 'Unknown')
       .replace('{angles}', angles);
 
-    console.log('[RAD Scorer] Starting Claude API call...');
+    console.log('[RAD Scorer] Starting Claude API call for trend:', trend.id);
+    console.log('[RAD Scorer] API Key present:', !!process.env.ANTHROPIC_API_KEY);
 
     const message = await client.messages.create({
       model: 'claude-3-5-sonnet-20241022',
@@ -60,7 +63,7 @@ async function scoreTrend(trend) {
       ? message.content[0].text 
       : '';
 
-    console.log('[RAD Scorer] Claude response received');
+    console.log('[RAD Scorer] Claude response:', responseText.substring(0, 100));
 
     // Parse JSON response
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
@@ -75,7 +78,7 @@ async function scoreTrend(trend) {
         typeof scores.auth_score !== 'number' ||
         typeof scores.dis_score !== 'number' ||
         typeof scores.social_score !== 'number') {
-      throw new Error('Invalid score format');
+      throw new Error('Invalid score format: ' + JSON.stringify(scores));
     }
 
     // Clamp scores to 0-25
@@ -90,12 +93,12 @@ async function scoreTrend(trend) {
       total_score: clamp(scores.rare_score) + clamp(scores.auth_score) + clamp(scores.dis_score) + clamp(scores.social_score)
     };
 
-    console.log('[RAD Scorer] Scores calculated:', result);
+    console.log('[RAD Scorer] ✅ Scores calculated:', result);
     return result;
 
   } catch (error) {
-    console.error('[RAD Scorer] Error:', error.message);
-    console.error('[RAD Scorer] Stack:', error.stack);
+    console.error('[RAD Scorer] ❌ Error:', error.message);
+    console.error('[RAD Scorer] Full error:', error);
     // Return default scores on error
     return {
       rare_score: 0,
