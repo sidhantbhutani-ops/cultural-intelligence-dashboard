@@ -19,7 +19,7 @@ Category: {category}
 Source: {source}
 Editorial Angles: {angles}
 
-Respond ONLY with valid JSON (no markdown, no preamble):
+Respond ONLY with valid JSON (no markdown, no preamble, no extra keys):
 {
   "rare_score": <0-25>,
   "auth_score": <0-25>,
@@ -62,20 +62,31 @@ async function scoreTrend(trend) {
       ? message.content[0].text 
       : '';
 
-    console.log('[RAD Scorer] Response preview:', responseText.substring(0, 150));
+    console.log('[RAD Scorer] Raw response:', responseText.substring(0, 300));
 
+    // Extract JSON more robustly
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      throw new Error(`No JSON in response: ${responseText}`);
+      throw new Error(`No JSON found in response: ${responseText}`);
     }
 
-    const scores = JSON.parse(jsonMatch[0]);
+    const parsed = JSON.parse(jsonMatch[0]);
+    
+    // Extract only the fields we need, ignore extras
+    const scores = {
+      rare_score: parsed.rare_score,
+      auth_score: parsed.auth_score,
+      dis_score: parsed.dis_score,
+      social_score: parsed.social_score,
+      editorial_insight: parsed.editorial_insight || 'Emerging trend with Broadway potential'
+    };
 
+    // Validate required fields are numbers
     if (typeof scores.rare_score !== 'number' || 
         typeof scores.auth_score !== 'number' ||
         typeof scores.dis_score !== 'number' ||
         typeof scores.social_score !== 'number') {
-      throw new Error('Invalid score format');
+      throw new Error(`Invalid score types: ${JSON.stringify(scores)}`);
     }
 
     const clamp = (val) => Math.max(0, Math.min(25, Math.round(val)));
@@ -85,7 +96,7 @@ async function scoreTrend(trend) {
       auth_score: clamp(scores.auth_score),
       dis_score: clamp(scores.dis_score),
       social_score: clamp(scores.social_score),
-      editorial_insight: scores.editorial_insight || 'Emerging trend with Broadway potential',
+      editorial_insight: scores.editorial_insight,
       total_score: clamp(scores.rare_score) + clamp(scores.auth_score) + clamp(scores.dis_score) + clamp(scores.social_score)
     };
 
@@ -94,6 +105,7 @@ async function scoreTrend(trend) {
 
   } catch (error) {
     console.error('[RAD Scorer] ❌ Error:', error.message);
+    console.error('[RAD Scorer] Trend:', trend.title);
     return {
       rare_score: 0,
       auth_score: 0,
