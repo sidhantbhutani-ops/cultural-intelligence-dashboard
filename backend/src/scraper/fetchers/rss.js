@@ -5,7 +5,7 @@ const loggerModule = require('../../middleware/logger.js');
 const logger = loggerModule.logger || loggerModule;
 
 const parser = new xml2js.Parser({
-  explicitArray: true,  // Keep as array to handle multiple links correctly
+  explicitArray: true,
   mergeAttrs: false,
 });
 
@@ -41,20 +41,30 @@ async function fetchRss(source) {
     }
 
     const content = items.slice(0, 5).map((item, idx) => {
-      // Extract article link from item (not channel link)
-      // With explicitArray: true, link is an array
+      // Debug: log the structure of item.link
+      logger.info(`[RSS] ${source.name} item ${idx}: link structure = ${JSON.stringify(item.link?.slice(0, 2))}`);
+
+      // Extract article link from item
+      // item.link is an array; we want the one that's NOT the channel link
       let link = source.base_url;
-      if (item.link && item.link.length > 0) {
-        // RSS: <link>url</link> → item.link[0]._ or item.link[0]
-        // Atom: <link href="url"/> → item.link[0].$.href
-        if (item.link[0]._) {
-          link = item.link[0]._;
-        } else if (item.link[0].$ && item.link[0].$.href) {
-          link = item.link[0].$.href;
-        } else if (typeof item.link[0] === 'string') {
-          link = item.link[0];
+      if (item.link && Array.isArray(item.link)) {
+        // Find the longest link (article link) vs shortest (channel link)
+        const validLinks = item.link
+          .map(l => {
+            if (typeof l === 'string') return l;
+            if (l._ && typeof l._ === 'string') return l._;
+            if (l.$ && l.$.href && typeof l.$.href === 'string') return l.$.href;
+            return null;
+          })
+          .filter(l => l && l.includes('http'));
+        
+        if (validLinks.length > 0) {
+          // Use the longest link (usually the article URL, not channel URL)
+          link = validLinks.reduce((a, b) => a.length > b.length ? a : b);
         }
       }
+
+      logger.info(`[RSS] ${source.name} item ${idx}: extracted link = ${link.substring(0, 100)}`);
 
       return {
         title: item.title?.[0] || '',
