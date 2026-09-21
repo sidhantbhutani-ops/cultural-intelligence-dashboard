@@ -6,7 +6,7 @@ const logger = loggerModule.logger || loggerModule;
 
 const parser = new xml2js.Parser({
   explicitArray: false,
-  mergeAttrs: true,
+  mergeAttrs: false,
 });
 
 async function fetchRss(source) {
@@ -32,37 +32,42 @@ async function fetchRss(source) {
     const xml = await response.text();
     const parsed = await parser.parseStringPromise(xml);
 
-    const items = parsed.rss?.channel?.item || parsed.feed?.entry || [];
-    const itemArray = Array.isArray(items) ? items : [items];
+    // Get items array from RSS or Atom feed
+    let items = [];
+    if (parsed.rss?.channel?.item) {
+      items = Array.isArray(parsed.rss.channel.item) 
+        ? parsed.rss.channel.item 
+        : [parsed.rss.channel.item];
+    } else if (parsed.feed?.entry) {
+      items = Array.isArray(parsed.feed.entry) 
+        ? parsed.feed.entry 
+        : [parsed.feed.entry];
+    }
 
-    const content = itemArray.slice(0, 5).map(item => {
-      // Extract link properly — handle both string and object formats
-      let link = null;
-      if (typeof item.link === 'string') {
-        link = item.link;
-      } else if (item.link?.$ && item.link.$.href) {
-        link = item.link.$.href;
-      } else if (item.link?._ || item.link) {
-        link = item.link?._ || item.link;
-      }
+    const content = items.slice(0, 5).map((item, idx) => {
+      // Extract article link (not channel link)
+      const link = item.link?.[0] || item.link || null;
       
-      // For Atom feeds, also check id as fallback
-      if (!link && item.id) {
-        link = item.id;
+      if (!link) {
+        logger.warn(`[RSS] ${source.name} item ${idx}: No link found`);
       }
 
       return {
-        title: item.title || item.summary?._,
-        description: item.description || item.content?._ || item.summary?._,
+        title: item.title?.[0] || item.title || '',
+        description: item.description?.[0] || item.description || item.summary?.[0] || '',
         source_url: link || source.base_url,
         source: source.name,
         sourceId: source.id,
-        pubDate: item.pubDate || item.published,
+        pubDate: item.pubDate?.[0] || item.pubDate || item.published?.[0] || item.published,
         rawContent: JSON.stringify(item),
       };
     });
 
     logger.info(`[RSS] ${source.name}: parsed ${content.length} items`);
+    content.forEach((item, i) => {
+      logger.debug(`[RSS] ${source.name} item ${i}: ${item.title.substring(0, 50)} -> ${item.source_url.substring(0, 100)}`);
+    });
+
     return content;
   } catch (err) {
     logger.error(`[RSS] ${source.name} failed: ${err.message}`);
