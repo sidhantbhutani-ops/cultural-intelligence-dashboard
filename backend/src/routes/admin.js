@@ -22,4 +22,19 @@ router.patch('/sources/:id', updateSource);
 // DELETE source
 router.delete('/sources/:id', deleteSource);
 
+
+// DELETE all trends (clear cache for re-analysis)
+router.post('/clear-trends', async (req, res) => {
+  try {
+    const supabase = require('../config/supabase');
+    const { error } = await supabase.query('DELETE FROM trends');
+    
+    if (error) throw error;
+    
+    res.json({ status: 'success', message: 'All trends deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
