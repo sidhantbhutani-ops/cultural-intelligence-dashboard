@@ -5,8 +5,8 @@ const { deduplicateItems } = require('./deduplicator');
 const { analyzeItems } = require('./analyzer');
 const supabase = require('../config/supabase');
 
-async function runScraper() {
-  const runId = `run_${Date.now()}`;
+async function runScraper(passedRunId) {
+  const runId = passedRunId || `run_${Date.now()}`;
   const startTime = new Date();
   let totalItemsFetched = 0;
   let totalTrendsCreated = 0;
@@ -65,7 +65,7 @@ async function runScraper() {
          WHERE run_id = $5`,
         ['completed', new Date().toISOString(), 0, 'No items fetched', runId]
       );
-      return { runId, success: true, itemsFetched: 0, trendsCreated: 0 };
+      return { runId, success: true, itemsFetched: 0, trendsCreated: 0, storedTrends: [] };
     }
 
     console.log(`[${runId}] Fetched ${allItems.length} total items`);
@@ -92,7 +92,7 @@ async function runScraper() {
     );
 
     console.log(`[${runId}] Scraper completed successfully`);
-    return { runId, success: true, itemsFetched: totalItemsFetched, trendsCreated: totalTrendsCreated };
+    return { runId, success: true, itemsFetched: totalItemsFetched, trendsCreated: totalTrendsCreated, storedTrends: analyzedTrends };
   } catch (error) {
     console.error(`[${runId}] Scraper failed:`, error.message);
     await supabase.query(
@@ -142,4 +142,4 @@ async function storeAnalyzedTrends(trends, runId) {
   return createdCount;
 }
 
-module.exports = { runScraper };
+module.exports = { runScraper, run: runScraper };
