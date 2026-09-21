@@ -19,6 +19,7 @@ async function fetchRss(source) {
 
     const response = await fetch(feedUrl, {
       timeout: 10000,
+      redirect: 'follow',
       headers: {
         'User-Agent': 'Broadway-Cultural-Intelligence/1.0',
       },
