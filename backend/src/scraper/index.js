@@ -94,7 +94,7 @@ async function storeAnalyzedTrends(trends, runId) {
           trend.source_url,
           trend.description,
           trend.category,
-          typeof trend.angles === "string" ? trend.angles : JSON.stringify(trend.angles || []),
+          trend.angles || [],
           new Date().toISOString(),
         ]
       );

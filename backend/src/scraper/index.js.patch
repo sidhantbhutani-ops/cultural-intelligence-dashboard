@@ -1,0 +1,19 @@
+// Find this line:
+          typeof trend.angles === "string" ? trend.angles : JSON.stringify(trend.angles || []),
+
+// Replace with:
+          (() => {
+            if (!trend.angles) return JSON.stringify([]);
+            if (typeof trend.angles === "string") {
+              try {
+                // Try to parse - if it's already a stringified array, parse it first
+                const parsed = JSON.parse(trend.angles);
+                return JSON.stringify(parsed);
+              } catch {
+                // If parse fails, it's already valid JSON string, use as-is
+                return trend.angles;
+              }
+            }
+            // It's an array, stringify it
+            return JSON.stringify(trend.angles);
+          })(),
