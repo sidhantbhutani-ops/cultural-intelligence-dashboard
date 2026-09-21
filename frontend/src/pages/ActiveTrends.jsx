@@ -26,11 +26,13 @@ export const ActiveTrends = () => {
   const loadTrends = async () => {
     try {
       setLoading(true);
-      const data = await getTrends();
-      setTrends(data.trends || []);
-      setFilteredTrends(data.trends || []);
+      const response = await getTrends();
+      const trendsData = response.data || [];
+      setTrends(trendsData);
+      setFilteredTrends(trendsData);
     } catch (error) {
       Toast.error('Failed to load trends');
+      console.error('Load trends error:', error);
     } finally {
       setLoading(false);
     }
@@ -85,7 +87,7 @@ export const ActiveTrends = () => {
   };
 
   const categories = [...new Set(trends.map(t => t.category))];
-  const velocities = ['emerging', 'peaking', 'declining'];
+  const velocities = ['emerging', 'peaking', 'declining', 'established'];
 
   if (loading) {
     return (
