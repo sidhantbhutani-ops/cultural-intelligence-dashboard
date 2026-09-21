@@ -43,8 +43,10 @@ async function scoreTrend(trend) {
       .replace('{source}', trend.source || 'Unknown')
       .replace('{angles}', angles);
 
+    console.log('[RAD Scorer] Starting Claude API call...');
+
     const message = await client.messages.create({
-      model: 'claude-opus-4-1',
+      model: 'claude-3-5-sonnet-20241022',
       max_tokens: 300,
       messages: [
         {
@@ -57,6 +59,8 @@ async function scoreTrend(trend) {
     const responseText = message.content[0].type === 'text' 
       ? message.content[0].text 
       : '';
+
+    console.log('[RAD Scorer] Claude response received');
 
     // Parse JSON response
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
@@ -77,7 +81,7 @@ async function scoreTrend(trend) {
     // Clamp scores to 0-25
     const clamp = (val) => Math.max(0, Math.min(25, Math.round(val)));
 
-    return {
+    const result = {
       rare_score: clamp(scores.rare_score),
       auth_score: clamp(scores.auth_score),
       dis_score: clamp(scores.dis_score),
@@ -85,8 +89,13 @@ async function scoreTrend(trend) {
       editorial_insight: scores.editorial_insight || 'Emerging trend with Broadway potential',
       total_score: clamp(scores.rare_score) + clamp(scores.auth_score) + clamp(scores.dis_score) + clamp(scores.social_score)
     };
+
+    console.log('[RAD Scorer] Scores calculated:', result);
+    return result;
+
   } catch (error) {
-    console.error('RAD scoring failed:', error.message);
+    console.error('[RAD Scorer] Error:', error.message);
+    console.error('[RAD Scorer] Stack:', error.stack);
     // Return default scores on error
     return {
       rare_score: 0,
