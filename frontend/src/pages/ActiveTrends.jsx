@@ -26,8 +26,7 @@ export const ActiveTrends = () => {
   const loadTrends = async () => {
     try {
       setLoading(true);
-      const response = await getTrends();
-      const trendsData = response.data || [];
+      const trendsData = await getTrends();
       setTrends(trendsData);
       setFilteredTrends(trendsData);
     } catch (error) {
