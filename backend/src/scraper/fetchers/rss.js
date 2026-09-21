@@ -9,7 +9,7 @@ const parser = new xml2js.Parser({
   mergeAttrs: true,
 });
 
-async function fetchRSS(source) {
+async function fetchRss(source) {
   try {
     const feedUrl = source.base_url.endsWith('.com')
       ? `${source.base_url}/feed`
@@ -53,5 +53,5 @@ async function fetchRSS(source) {
 }
 
 module.exports = {
-  fetch: fetchRSS,
+  fetchRss,
 };
