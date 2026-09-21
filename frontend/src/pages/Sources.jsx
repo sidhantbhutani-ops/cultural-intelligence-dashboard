@@ -31,10 +31,23 @@ export default function Sources() {
     try {
       setLoading(true);
       const response = await api('/admin/sources');
-      setSources(response.data || []);
+      console.log('API Response:', response);
+      
+      // Handle different response structures
+      let sourcesArray = [];
+      if (Array.isArray(response)) {
+        sourcesArray = response;
+      } else if (response && response.data && Array.isArray(response.data)) {
+        sourcesArray = response.data;
+      } else if (response && response.sources && Array.isArray(response.sources)) {
+        sourcesArray = response.sources;
+      }
+      
+      setSources(sourcesArray);
     } catch (error) {
       setToast({ type: 'error', message: 'Failed to fetch sources' });
       console.error('Fetch sources error:', error);
+      setSources([]);
     } finally {
       setLoading(false);
     }
@@ -106,43 +119,49 @@ export default function Sources() {
         <Button onClick={() => setShowAddModal(true)}>Add Source</Button>
       </div>
 
-      <div className="grid gap-4">
-        {sources.map(source => (
-          <div key={source.id} className="border rounded p-4 bg-white">
-            <div className="flex justify-between items-start mb-2">
-              <div>
-                <h3 className="font-bold text-lg">{source.name}</h3>
-                <p className="text-sm text-gray-600">{source.description}</p>
+      {sources.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-gray-600">No sources found. Add one to get started.</p>
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {sources.map(source => (
+            <div key={source.id} className="border rounded p-4 bg-white">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <h3 className="font-bold text-lg">{source.name}</h3>
+                  <p className="text-sm text-gray-600">{source.description}</p>
+                </div>
+                <Badge>{source.is_active ? 'Active' : 'Inactive'}</Badge>
               </div>
-              <Badge>{source.is_active ? 'Active' : 'Inactive'}</Badge>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-2 text-sm mb-4">
-              <div><span className="font-medium">Type:</span> {source.source_type}</div>
-              <div><span className="font-medium">Strategy:</span> {source.scrape_strategy}</div>
-              <div><span className="font-medium">Priority:</span> {source.priority}</div>
-              <div><span className="font-medium">URL:</span> <code className="text-xs bg-gray-100 px-1">{source.base_url}</code></div>
-            </div>
+              
+              <div className="grid grid-cols-2 gap-2 text-sm mb-4">
+                <div><span className="font-medium">Type:</span> {source.source_type}</div>
+                <div><span className="font-medium">Strategy:</span> {source.scrape_strategy}</div>
+                <div><span className="font-medium">Priority:</span> {source.priority}</div>
+                <div><span className="font-medium">URL:</span> <code className="text-xs bg-gray-100 px-1">{source.base_url}</code></div>
+              </div>
 
-            <div className="flex gap-2">
-              <Button variant="secondary" size="sm" onClick={() => setEditingId(source.id)}>Edit</Button>
-              <Button variant="danger" size="sm" onClick={() => handleDeleteSource(source.id)}>Delete</Button>
-            </div>
+              <div className="flex gap-2">
+                <Button variant="secondary" size="sm" onClick={() => setEditingId(source.id)}>Edit</Button>
+                <Button variant="danger" size="sm" onClick={() => handleDeleteSource(source.id)}>Delete</Button>
+              </div>
 
-            {editingId === source.id && (
-              <EditModal
-                source={source}
-                onClose={() => setEditingId(null)}
-                onSave={() => handleUpdateSource(source.id)}
-                onChange={(field, value) => {
-                  const updated = sources.map(s => s.id === source.id ? { ...s, [field]: value } : s);
-                  setSources(updated);
-                }}
-              />
-            )}
-          </div>
-        ))}
-      </div>
+              {editingId === source.id && (
+                <EditModal
+                  source={source}
+                  onClose={() => setEditingId(null)}
+                  onSave={() => handleUpdateSource(source.id)}
+                  onChange={(field, value) => {
+                    const updated = sources.map(s => s.id === source.id ? { ...s, [field]: value } : s);
+                    setSources(updated);
+                  }}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {showAddModal && (
         <Modal onClose={() => setShowAddModal(false)}>
