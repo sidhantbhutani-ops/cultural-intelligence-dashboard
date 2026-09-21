@@ -1,4 +1,4 @@
-const { query } = require('../config/database.js');
+const { query } = require('../config/supabase.js');
 
 async function isDuplicate(title, source_url, source) {
   try {
