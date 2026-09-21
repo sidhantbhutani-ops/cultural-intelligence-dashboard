@@ -30,10 +30,11 @@ export default function Sources() {
   const fetchSources = async () => {
     try {
       setLoading(true);
-      const data = await api.get('/admin/sources');
-      setSources(data);
+      const response = await api('/admin/sources');
+      setSources(response.data || []);
     } catch (error) {
       setToast({ type: 'error', message: 'Failed to fetch sources' });
+      console.error('Fetch sources error:', error);
     } finally {
       setLoading(false);
     }
@@ -42,7 +43,10 @@ export default function Sources() {
   const handleAddSource = async (e) => {
     e.preventDefault();
     try {
-      await api.post('/admin/sources', newSource);
+      await api('/admin/sources', {
+        method: 'POST',
+        body: JSON.stringify(newSource),
+      });
       setToast({ type: 'success', message: 'Source added successfully' });
       setShowAddModal(false);
       setNewSource({
@@ -58,29 +62,37 @@ export default function Sources() {
       fetchSources();
     } catch (error) {
       setToast({ type: 'error', message: 'Failed to add source' });
+      console.error('Add source error:', error);
     }
   };
 
   const handleUpdateSource = async (id) => {
     try {
       const sourceToUpdate = sources.find(s => s.id === id);
-      await api.patch(`/admin/sources/${id}`, sourceToUpdate);
+      await api(`/admin/sources/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(sourceToUpdate),
+      });
       setToast({ type: 'success', message: 'Source updated successfully' });
       setEditingId(null);
       fetchSources();
     } catch (error) {
       setToast({ type: 'error', message: 'Failed to update source' });
+      console.error('Update source error:', error);
     }
   };
 
   const handleDeleteSource = async (id) => {
     if (window.confirm('Are you sure?')) {
       try {
-        await api.delete(`/admin/sources/${id}`);
+        await api(`/admin/sources/${id}`, {
+          method: 'DELETE',
+        });
         setToast({ type: 'success', message: 'Source deleted' });
         fetchSources();
       } catch (error) {
         setToast({ type: 'error', message: 'Failed to delete source' });
+        console.error('Delete source error:', error);
       }
     }
   };
