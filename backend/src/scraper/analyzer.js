@@ -18,7 +18,7 @@ async function analyzeContent(items) {
       messages: [
         {
           role: 'user',
-          content: `Extract 8-12 cultural trends from these articles. Return ONLY valid JSON array (no markdown, no text before/after).
+          content: `Extract 8-12 cultural trends from these articles. For each trend, generate 2-3 editorial angles that Broadway's content team could execute (UGC ideas, brand collaborations, content series, narrative hooks). Return ONLY valid JSON array (no markdown, no text before/after).
 
 [
   {
@@ -27,10 +27,10 @@ async function analyzeContent(items) {
     "source": "article source",
     "source_url": "https://...",
     "category": "fashion|music|pop-culture|lifestyle|wellness|beauty",
-    "velocity": "emerging",
+    "velocity": "emerging|established",
     "engagement_metric": 75,
     "cultural_significance": "Brief impact explanation",
-    "angles": ["angle1", "angle2"]
+    "angles": ["Specific UGC/content hook #1", "Brand collaboration angle", "Content series idea"]
   }
 ]
 
