@@ -94,10 +94,15 @@ export const TrendCard = ({ trend, onClick }) => {
                 <span className="text-10 font-medium text-gray-600">{dim.label}</span>
                 <span className="text-10 font-bold">{trend[dim.key] || 0}/{dim.max}</span>
               </div>
-              <div className="w-full h-5 bg-gray-100 rounded overflow-hidden">
+              <div className="w-full h-6 bg-gray-200 rounded-full overflow-hidden shadow-sm">
                 <div 
-                  className={dim.color}
-                  style={{ width: `${((trend[dim.key] || 0) / dim.max) * 100}%` }}
+                  style={{ 
+                    width: `${((trend[dim.key] || 0) / dim.max) * 100}%`,
+                    backgroundColor: dim.color,
+                    transition: 'width 0.3s ease-in-out',
+                    borderRadius: '9999px',
+                    opacity: 0.9
+                  }}
                 />
               </div>
             </div>
