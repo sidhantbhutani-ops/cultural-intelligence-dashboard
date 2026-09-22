@@ -94,7 +94,7 @@ export const TrendModal = ({ trend, onClose }) => {
                   <div className="w-full h-6 bg-gray-200 rounded-full overflow-hidden shadow-sm">
                     <div 
                       style={{ 
-                        width: \`\${((trend[dim.key] || 0) / dim.max) * 100}%\`,
+                        width: `${((trend[dim.key] || 0) / dim.max) * 100}%`,
                         backgroundColor: dim.color,
                         transition: 'width 0.3s ease-in-out',
                         borderRadius: '9999px',
