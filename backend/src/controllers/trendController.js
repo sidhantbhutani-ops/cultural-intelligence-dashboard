@@ -1,4 +1,4 @@
-const { query } = require('../config/supabase.js');
+const { query, supabase } = require('../config/supabase.js');
 
 async function getTrends(req, res, next) {
   try {
