@@ -1,5 +1,5 @@
 const express = require('express');
-const { getTrends, getTrendById, getArchive } = require('../controllers/trendController');
+const { getTrends, getTrendById, getArchive, getTrendsByClusters } = require('../controllers/trendController');
 const { createAction } = require('../controllers/actionController');
 const authMiddleware = require('../middleware/auth');
 
@@ -13,6 +13,10 @@ router.get('/', getTrends);
 
 // GET archive (MUST come before /:id)
 router.get('/archive', getArchive);
+
+
+// GET trends grouped by cluster
+router.get('/clusters/list', getTrendsByClusters);
 
 // GET single trend
 router.get('/:id', getTrendById);
