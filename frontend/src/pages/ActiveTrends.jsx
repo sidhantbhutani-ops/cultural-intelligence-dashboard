@@ -14,8 +14,6 @@ export const ActiveTrends = () => {
   const [selectedTrend, setSelectedTrend] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedVelocity, setSelectedVelocity] = useState('all');
   const [teamMembers, setTeamMembers] = useState({});
 
   useEffect(() => {
@@ -60,14 +58,6 @@ export const ActiveTrends = () => {
       );
     }
 
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(t => t.category === selectedCategory);
-    }
-
-    if (selectedVelocity !== 'all') {
-      filtered = filtered.filter(t => t.velocity === selectedVelocity);
-    }
-
     // Sort by RAD score descending
     filtered.sort((a, b) => {
       const aRAD = (a.rare_score || 0) + (a.auth_score || 0) + (a.dis_score || 0) + (a.social_score || 0);
@@ -76,7 +66,7 @@ export const ActiveTrends = () => {
     });
 
     setFilteredTrends(filtered);
-  }, [searchTerm, selectedCategory, selectedVelocity, trends]);
+  }, [searchTerm, trends]);
 
   const handleTrendClick = (trend) => {
     setSelectedTrend(trend);
@@ -101,9 +91,6 @@ export const ActiveTrends = () => {
     }
   };
 
-  const categories = [...new Set(trends.map(t => t.category))];
-  const velocities = ['emerging', 'peaking', 'declining', 'established'];
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -121,35 +108,7 @@ export const ActiveTrends = () => {
           onChange={(e) => setSearchTerm(e.target.value)}
         />
 
-        <div className="flex gap-4">
-          <div className="flex-1">
-            <label className="block text-13 font-semibold text-gray-900 mb-2">Category</label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg text-14"
-            >
-              <option value="all">All Categories</option>
-              {categories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
 
-          <div className="flex-1">
-            <label className="block text-13 font-semibold text-gray-900 mb-2">Velocity</label>
-            <select
-              value={selectedVelocity}
-              onChange={(e) => setSelectedVelocity(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg text-14"
-            >
-              <option value="all">All Velocities</option>
-              {velocities.map(vel => (
-                <option key={vel} value={vel}>{vel}</option>
-              ))}
-            </select>
-          </div>
-        </div>
       </div>
 
       {filteredTrends.length === 0 ? (
