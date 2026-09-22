@@ -110,6 +110,20 @@ export const TrendCard = ({ trend, onClick }) => {
         </div>
       )}
 
+      {/* Broadway Brand Activations */}
+      {trend.brand_activations && trend.brand_activations.length > 0 && (
+        <div className="mb-4 bg-emerald-50 border-l-4 border-emerald-500 p-3 rounded">
+          <p className="text-11 font-semibold text-emerald-900 mb-2">Broadway Brands to Activate:</p>
+          <div className="space-y-1">
+            {trend.brand_activations.map((brand, idx) => (
+              <div key={idx} className="text-12 text-emerald-800">
+                <span className="font-semibold">{brand.name}</span> — {brand.reason}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Editorial Angles */}
       {trend.angles && trend.angles.length > 0 && (
         <div className="mb-4">
