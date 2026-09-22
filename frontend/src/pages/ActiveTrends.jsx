@@ -5,7 +5,7 @@ import { Modal } from '../components/Modal';
 import { Input } from '../components/Input';
 import { Spinner } from '../components/Spinner';
 import { Toast } from '../components/Toast';
-import { getTrends, getTeamMembers } from '../api';
+import { getTrends, getTeamMembers, api } from '../api';
 
 export const ActiveTrends = () => {
   const [trends, setTrends] = useState([]);
@@ -93,19 +93,10 @@ export const ActiveTrends = () => {
   };
   const handlePickUp = async (trendId) => {
     try {
-      const response = await fetch(`${API_URL}/trends/${trendId}/pickup`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) throw new Error('Failed to pick up trend');
-      
-      // Reload trends to reflect change
+      await api(`/trends/${trendId}/pickup`, { method: 'PATCH' });
       loadTrends();
     } catch (error) {
+      Toast.error('Failed to pick up trend');
       console.error('Error picking up trend:', error);
     }
   };
