@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { TrendCard } from '../components/TrendCard';
-import { TrendDetail } from '../components/TrendDetail';
+import { TrendModal } from '../components/TrendDetail';
 import { Modal } from '../components/Modal';
 import { Input } from '../components/Input';
 import { Spinner } from '../components/Spinner';
@@ -160,7 +160,7 @@ export const ActiveTrends = () => {
       )}
 
       <Modal isOpen={showDetailModal} onClose={handleCloseModal} title="Trend Details" large>
-        {selectedTrend && <TrendDetail trend={selectedTrend} onUpdate={handleUpdate} />}
+        {selectedTrend && <TrendModal trend={selectedTrend} onClose={() => setSelectedTrend(null)} />}
       </Modal>
     </div>
   );
