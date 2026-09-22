@@ -85,6 +85,30 @@ export const TrendCard = ({ trend, onClick }) => {
         </div>
       )}
 
+      {/* Action Mapping: Content, In-Store, Product */}
+      {trend.action_mapping && (
+        <div className="grid grid-cols-1 gap-3 mb-4">
+          {trend.action_mapping.content_idea && (
+            <div className="bg-blue-50 border-l-4 border-blue-400 p-3 rounded">
+              <p className="text-10 font-semibold text-blue-900 mb-1">💬 Content Idea</p>
+              <p className="text-11 text-blue-800">{trend.action_mapping.content_idea}</p>
+            </div>
+          )}
+          {trend.action_mapping.in_store_activation && (
+            <div className="bg-purple-50 border-l-4 border-purple-400 p-3 rounded">
+              <p className="text-10 font-semibold text-purple-900 mb-1">🏪 In-Store Activation</p>
+              <p className="text-11 text-purple-800">{trend.action_mapping.in_store_activation}</p>
+            </div>
+          )}
+          {trend.action_mapping.product_launch && (
+            <div className="bg-orange-50 border-l-4 border-orange-400 p-3 rounded">
+              <p className="text-10 font-semibold text-orange-900 mb-1">🚀 Product Launch</p>
+              <p className="text-11 text-orange-800">{trend.action_mapping.product_launch}</p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* SPECTRUM Score Bars (6 dimensions) */}
       {totalSpectrum > 0 && (
         <div className="grid grid-cols-2 gap-3 mb-4">
