@@ -25,12 +25,12 @@ export const TrendCard = ({ trend, onClick }) => {
 
   // SPECTRUM dimensions with their max scores
   const spectrumDimensions = [
-    { key: 'velocity_score', label: 'Velocity', max: 25, color: 'bg-red-500' },
-    { key: 'platform_score', label: 'Platform Spread', max: 20, color: 'bg-orange-500' },
-    { key: 'novelty_score', label: 'Novelty', max: 20, color: 'bg-yellow-500' },
-    { key: 'community_score', label: 'Community', max: 15, color: 'bg-green-500' },
-    { key: 'adoption_score', label: 'Adoption', max: 10, color: 'bg-blue-500' },
-    { key: 'category_score', label: 'Category', max: 10, color: 'bg-purple-500' },
+    { key: 'velocity_score', label: 'Velocity', max: 25, color: '#ef4444' },
+    { key: 'platform_score', label: 'Platform Spread', max: 20, color: '#f97316' },
+    { key: 'novelty_score', label: 'Novelty', max: 20, color: '#eab308' },
+    { key: 'community_score', label: 'Community', max: 15, color: '#22c55e' },
+    { key: 'adoption_score', label: 'Adoption', max: 10, color: '#3b82f6' },
+    { key: 'category_score', label: 'Category', max: 10, color: '#a855f7' },
   ];
 
   return (
