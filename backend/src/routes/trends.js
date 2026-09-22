@@ -21,3 +21,6 @@ router.get('/:id', getTrendById);
 router.post('/:id/actions', createAction);
 
 module.exports = router;
+
+// Pick up a trend
+router.patch('/:trendId/pickup', auth, trendController.pickUpTrend);

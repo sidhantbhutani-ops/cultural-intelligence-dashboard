@@ -214,3 +214,24 @@ exports.getTrendsByClusters = async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 };
+
+export const pickUpTrend = async (req, res) => {
+  const { trendId } = req.params;
+  const userId = req.user.id;
+
+  const { data, error } = await supabase
+    .from('trends')
+    .update({
+      picked_up: true,
+      picked_by: userId,
+      picked_at: new Date().toISOString()
+    })
+    .eq('id', trendId)
+    .select();
+
+  if (error) {
+    return res.status(400).json({ error: error.message });
+  }
+
+  res.json({ success: true, trend: data[0] });
+};

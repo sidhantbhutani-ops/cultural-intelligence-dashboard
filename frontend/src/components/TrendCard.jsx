@@ -1,6 +1,6 @@
 import { Badge } from './Badge';
 
-export const TrendCard = ({ trend, onClick }) => {
+export const TrendCard = ({ trend, onClick, onPickUp }) => {
   const totalSpectrum = (trend.velocity_score || 0) + (trend.platform_score || 0) + 
                         (trend.novelty_score || 0) + (trend.community_score || 0) + 
                         (trend.adoption_score || 0) + (trend.category_score || 0);
@@ -40,10 +40,25 @@ export const TrendCard = ({ trend, onClick }) => {
       {/* Description */}
       <p className="text-14 text-gray-700 mb-4 leading-relaxed line-clamp-2">{trend.description}</p>
 
-      {/* View Details Button */}
-      <div className="flex items-center gap-2 text-13 font-semibold text-indigo-600 hover:text-indigo-700">
-        <span>View Details</span>
-        <span>→</span>
+      {/* View Details + Pick Up Buttons */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-13 font-semibold text-indigo-600 hover:text-indigo-700">
+          <span>View Details</span>
+          <span>→</span>
+        </div>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onPickUp?.(trend.id);
+          }}
+          className={`px-3 py-1 rounded text-12 font-semibold transition-all ${
+            trend.picked_up
+              ? 'bg-green-100 text-green-700 cursor-default'
+              : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+          }`}
+        >
+          {trend.picked_up ? '✓ Picked' : 'Pick Up'}
+        </button>
       </div>
 
       {/* Status Indicator */}

@@ -91,6 +91,24 @@ export const ActiveTrends = () => {
   const handleUpdate = () => {
     loadTrends();
   };
+  const handlePickUp = async (trendId) => {
+    try {
+      const response = await fetch(`${API_URL}/trends/${trendId}/pickup`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) throw new Error('Failed to pick up trend');
+      
+      // Reload trends to reflect change
+      loadTrends();
+    } catch (error) {
+      console.error('Error picking up trend:', error);
+    }
+  };
 
   const categories = [...new Set(trends.map(t => t.category))];
   const velocities = ['emerging', 'peaking', 'declining', 'established'];
@@ -154,6 +172,7 @@ export const ActiveTrends = () => {
               key={trend.id}
               trend={trend}
               onClick={() => handleTrendClick(trend)}
+              onPickUp={handlePickUp}
             />
           ))}
         </div>
