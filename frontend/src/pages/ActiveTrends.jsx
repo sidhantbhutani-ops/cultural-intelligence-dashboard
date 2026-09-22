@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { TrendCard } from '../components/TrendCard';
-import { TrendModal } from '../components/TrendDetail';
+import { TrendModal } from '../components/TrendModal';
 import { Modal } from '../components/Modal';
 import { Input } from '../components/Input';
 import { Spinner } from '../components/Spinner';
