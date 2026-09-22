@@ -158,10 +158,7 @@ async function handleUpdate(sql, params) {
   let qb = supabase.from(table).update(updateData);
   const whereMatch = sql.match(/WHERE\s+(.*?)(?:RETURNING|$)/i);
   if (whereMatch) {
-    const whereClause = whereMatch[1].trim();
-    if (paramIdx < params.length) {
-      qb = qb.eq('id', params[paramIdx]);
-    }
+    qb = applyWhereConditions(qb, whereMatch[1].trim(), params.slice(paramIdx));
   }
   
   const { data, error } = await qb.select();
