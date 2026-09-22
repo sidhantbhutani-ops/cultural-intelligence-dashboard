@@ -136,7 +136,7 @@ async function getArchive(req, res, next) {
 
 async function pickUpTrend(req, res) {
   const { trendId } = req.params;
-  const userId = req.user.id;
+  const userId = req.user.user_id;
 
   const { data, error } = await supabase
     .from('trends')
