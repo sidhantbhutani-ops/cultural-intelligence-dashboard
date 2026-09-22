@@ -134,6 +134,30 @@ export const TrendCard = ({ trend, onClick }) => {
         </div>
       )}
 
+      {/* Consumption Triggers: When, Where, How */}
+      {trend.consumption_triggers && (
+        <div className="grid grid-cols-1 gap-3 mb-4">
+          {trend.consumption_triggers.when && (
+            <div className="bg-rose-50 border-l-4 border-rose-400 p-3 rounded">
+              <p className="text-10 font-semibold text-rose-900 mb-1">⏰ When</p>
+              <p className="text-11 text-rose-800">{trend.consumption_triggers.when}</p>
+            </div>
+          )}
+          {trend.consumption_triggers.where && (
+            <div className="bg-cyan-50 border-l-4 border-cyan-400 p-3 rounded">
+              <p className="text-10 font-semibold text-cyan-900 mb-1">📱 Where</p>
+              <p className="text-11 text-cyan-800">{trend.consumption_triggers.where}</p>
+            </div>
+          )}
+          {trend.consumption_triggers.how && (
+            <div className="bg-teal-50 border-l-4 border-teal-400 p-3 rounded">
+              <p className="text-10 font-semibold text-teal-900 mb-1">💭 How</p>
+              <p className="text-11 text-teal-800">{trend.consumption_triggers.how}</p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Broadway Brand Activations */}
       {trend.brand_activations && trend.brand_activations.length > 0 && (
         <div className="mb-4 bg-emerald-50 border-l-4 border-emerald-500 p-3 rounded">
