@@ -1,5 +1,5 @@
 const express = require('express');
-const { getTrends, getTrendById, getArchive } = require('../controllers/trendController');
+const { getTrends, getTrendById, getArchive, pickUpTrend } = require('../controllers/trendController');
 const { createAction } = require('../controllers/actionController');
 const authMiddleware = require('../middleware/auth');
 
@@ -20,7 +20,7 @@ router.get('/:id', getTrendById);
 // POST action on trend
 router.post('/:id/actions', createAction);
 
-module.exports = router;
+// PATCH pick up a trend
+router.patch('/:trendId/pickup', pickUpTrend);
 
-// Pick up a trend
-router.patch('/:trendId/pickup', auth, trendController.pickUpTrend);
+module.exports = router;
