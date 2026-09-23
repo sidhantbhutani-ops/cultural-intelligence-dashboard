@@ -1,17 +1,14 @@
 import { Badge } from './Badge';
+import { SpectrumViz } from './SpectrumViz';
 
 export const TrendCard = ({ trend, onClick, onPickUp }) => {
-  const totalSpectrum = (trend.velocity_score || 0) + (trend.platform_score || 0) + 
-                        (trend.novelty_score || 0) + (trend.community_score || 0) + 
-                        (trend.adoption_score || 0) + (trend.category_score || 0);
-
   return (
     <div 
       onClick={onClick}
       className="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-all cursor-pointer bg-white"
     >
       {/* Header */}
-      <div className="flex justify-between items-start mb-4">
+      <div className="flex justify-between items-start mb-4 gap-6">
         <div className="flex-1">
           <h3 className="text-18 font-bold text-gray-900 mb-2">{trend.title}</h3>
           <div className="flex gap-2 items-center mb-2 text-13">
@@ -30,10 +27,9 @@ export const TrendCard = ({ trend, onClick, onPickUp }) => {
           <Badge variant="primary" size="sm" className="mb-3">{trend.category}</Badge>
         </div>
         
-        {/* SPECTRUM Score */}
-        <div className="text-right">
-          <div className="text-32 font-bold text-indigo-600">{totalSpectrum}</div>
-          <div className="text-11 text-gray-500 font-medium">SPECTRUM Score</div>
+        {/* SPECTRUM Visualization */}
+        <div className="w-64 flex-shrink-0">
+          <SpectrumViz trend={trend} />
         </div>
       </div>
 
