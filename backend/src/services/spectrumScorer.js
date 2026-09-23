@@ -1,5 +1,5 @@
 const Anthropic = require('@anthropic-ai/sdk');
-const { query } = require('../config/supabase');
+const { supabase } = require('../config/supabase');
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY
@@ -118,7 +118,7 @@ async function scoreTrend(trend, retries = 3) {
 
         console.log(`[SPECTRUM] ✅ Scored: ${result.total_score}/100 for "${trend.title.substring(0, 40)}"`);
         
-        // Update database with scores
+        // Update database with scores - use Supabase native client
         if (trend.id) {
           await updateTrendScores(trend.id, result);
         }
@@ -155,27 +155,20 @@ async function scoreTrend(trend, retries = 3) {
 
 async function updateTrendScores(trendId, scores) {
   try {
-    await query(
-      `UPDATE trends 
-       SET velocity_score = $1, 
-           platform_score = $2, 
-           novelty_score = $3, 
-           community_score = $4, 
-           adoption_score = $5, 
-           category_score = $6,
-           spectrum_insight = $7
-       WHERE id = $8`,
-      [
-        scores.velocity_score,
-        scores.platform_score,
-        scores.novelty_score,
-        scores.community_score,
-        scores.adoption_score,
-        scores.category_score,
-        scores.spectrum_insight,
-        trendId
-      ]
-    );
+    const { data, error } = await supabase
+      .from('trends')
+      .update({
+        velocity_score: scores.velocity_score,
+        platform_score: scores.platform_score,
+        novelty_score: scores.novelty_score,
+        community_score: scores.community_score,
+        adoption_score: scores.adoption_score,
+        category_score: scores.category_score,
+        spectrum_insight: scores.spectrum_insight
+      })
+      .eq('id', trendId);
+    
+    if (error) throw error;
     
     console.log(`[SPECTRUM] ✅ Updated DB for trend ${trendId}`);
   } catch (error) {
