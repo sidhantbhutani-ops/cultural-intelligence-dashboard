@@ -17,7 +17,8 @@ const adminRouter = require('./routes/admin');
 const scraperRouter = require('./routes/scraper');
 const collaborationRouter = require('./routes/collaborationRoutes');
 const teamRouter = require('./routes/team');
-const scoringRouter = require('./routes/scoring');
+const scoringRouter = require("./routes/scoring");
+const healthRouter = require("./routes/health");
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.use('/api/admin', adminRouter);
 app.use('/api/collaboration', collaborationRouter);
 app.use('/api/team', teamRouter);
 app.use('/api/scoring', scoringRouter);
+app.use("/api", healthRouter);
 
 // Error Handler
 app.use(errorHandler);
