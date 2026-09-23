@@ -1,7 +1,7 @@
 const { fetchRss } = require('./fetchers/rss');
 const { fetchHtml } = require('./fetchers/html');
 const { fetchReddit } = require('./fetchers/reddit');
-const { dedupItems } = require('./deduplicator');
+const { dedupItems } = require('./deduplicator-debug');
 const { analyzeContent } = require('./analyzer');
 const supabase = require('../config/supabase');
 
