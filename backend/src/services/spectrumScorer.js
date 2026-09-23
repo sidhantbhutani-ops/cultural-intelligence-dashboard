@@ -36,7 +36,7 @@ Respond ONLY with valid JSON:
   "spectrum_insight": "<2-3 sentence explanation>"
 }`;
 
-async function scoreTrend(trend) {
+async function scoreTrend(trend, retries = 3) {
   try {
     if (!trend.title || !trend.description) {
       throw new Error('Trend missing title or description');
@@ -55,72 +55,87 @@ async function scoreTrend(trend) {
 
     console.log(`[SPECTRUM] Scoring trend: ${trend.title.substring(0, 50)}`);
 
-    const message = await client.messages.create({
-      model: 'claude-sonnet-5',
-      max_tokens: 400,
-      messages: [
-        {
-          role: 'user',
-          content: prompt
+    let lastError;
+    for (let attempt = 0; attempt < retries; attempt++) {
+      try {
+        const message = await client.messages.create({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 400,
+          messages: [
+            {
+              role: 'user',
+              content: prompt
+            }
+          ]
+        });
+
+        console.log(`[SPECTRUM] API Response received, content length: ${message.content.length}`);
+
+        if (!message.content || message.content.length === 0) {
+          throw new Error('Empty response from Claude API');
         }
-      ]
-    });
 
-    console.log(`[SPECTRUM] API Response received, content length: ${message.content.length}`);
+        const responseText = message.content[0].type === 'text' 
+          ? message.content[0].text 
+          : '';
 
-    if (!message.content || message.content.length === 0) {
-      throw new Error('Empty response from Claude API');
+        console.log(`[SPECTRUM] Response text (first 200 chars): ${responseText.substring(0, 200)}`);
+
+        if (!responseText) {
+          throw new Error('Response text is empty');
+        }
+
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          throw new Error(`No JSON found in response: ${responseText}`);
+        }
+
+        const parsed = JSON.parse(jsonMatch[0]);
+        
+        const maxScores = {
+          velocity_score: 25,
+          platform_score: 20,
+          novelty_score: 20,
+          community_score: 15,
+          adoption_score: 10,
+          category_score: 10
+        };
+
+        const clamp = (val, max) => Math.max(0, Math.min(max, Math.round(val)));
+
+        const result = {
+          velocity_score: clamp(parsed.velocity_score, maxScores.velocity_score),
+          platform_score: clamp(parsed.platform_score, maxScores.platform_score),
+          novelty_score: clamp(parsed.novelty_score, maxScores.novelty_score),
+          community_score: clamp(parsed.community_score, maxScores.community_score),
+          adoption_score: clamp(parsed.adoption_score, maxScores.adoption_score),
+          category_score: clamp(parsed.category_score, maxScores.category_score),
+          spectrum_insight: parsed.spectrum_insight || 'Emerging trend'
+        };
+
+        result.total_score = result.velocity_score + result.platform_score + result.novelty_score + 
+                             result.community_score + result.adoption_score + result.category_score;
+
+        console.log(`[SPECTRUM] ✅ Scored: ${result.total_score}/100 for "${trend.title.substring(0, 40)}"`);
+        
+        // Update database with scores
+        if (trend.id) {
+          await updateTrendScores(trend.id, result);
+        }
+        
+        return result;
+
+      } catch (error) {
+        lastError = error;
+        if (attempt < retries - 1) {
+          const delay = Math.pow(2, attempt) * 1000;
+          console.warn(`[SPECTRUM] Retry ${attempt + 1}/${retries} after ${delay}ms:`, error.message);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
     }
 
-    const responseText = message.content[0].type === 'text' 
-      ? message.content[0].text 
-      : '';
-
-    console.log(`[SPECTRUM] Response text (first 200 chars): ${responseText.substring(0, 200)}`);
-
-    if (!responseText) {
-      throw new Error('Response text is empty');
-    }
-
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error(`No JSON found in response: ${responseText}`);
-    }
-
-    const parsed = JSON.parse(jsonMatch[0]);
-    
-    const maxScores = {
-      velocity_score: 25,
-      platform_score: 20,
-      novelty_score: 20,
-      community_score: 15,
-      adoption_score: 10,
-      category_score: 10
-    };
-
-    const clamp = (val, max) => Math.max(0, Math.min(max, Math.round(val)));
-
-    const result = {
-      velocity_score: clamp(parsed.velocity_score, maxScores.velocity_score),
-      platform_score: clamp(parsed.platform_score, maxScores.platform_score),
-      novelty_score: clamp(parsed.novelty_score, maxScores.novelty_score),
-      community_score: clamp(parsed.community_score, maxScores.community_score),
-      adoption_score: clamp(parsed.adoption_score, maxScores.adoption_score),
-      category_score: clamp(parsed.category_score, maxScores.category_score),
-      spectrum_insight: parsed.spectrum_insight || 'Emerging trend'
-    };
-
-    result.total_score = result.velocity_score + result.platform_score + result.novelty_score + 
-                         result.community_score + result.adoption_score + result.category_score;
-
-    console.log(`[SPECTRUM] ✅ Scored: ${result.total_score}/100 for "${trend.title.substring(0, 40)}"`);
-    
-    // Update database with scores
-    if (trend.id) {
-      await updateTrendScores(trend.id, result);
-    }
-    
-    return result;
+    throw lastError;
 
   } catch (error) {
     console.error(`[SPECTRUM] ❌ Error scoring "${trend.title}":`, error.message);
