@@ -4,9 +4,9 @@ const client = new Anthropic();
 
 async function analyzeContent(items) {
   try {
-    // Create item list with source_url included
+    // Create item list with indices for Claude to reference
     const itemsText = items
-      .map((item, i) => `${i + 1}. "${item.title}" (${item.source}) - ${item.source_url}`)
+      .map((item, i) => `${i}. "${item.title}" (${item.source}) - ${item.source_url}`)
       .join('\n');
 
     console.log(`[Analyzer] Sending ${items.length} items to Claude for analysis`);
@@ -17,14 +17,15 @@ async function analyzeContent(items) {
       messages: [
         {
           role: 'user',
-          content: `Extract 8-12 cultural trends from these articles. For each trend, generate 2-3 editorial angles that Broadway's content team could execute (UGC ideas, brand collaborations, content series, narrative hooks). Return ONLY valid JSON array (no markdown, no text before/after).
+          content: `Extract 8-12 cultural trends from these articles. For each trend, identify which articles (by index) support it, and generate 2-3 editorial angles. Return ONLY valid JSON array (no markdown, no text before/after).
 
 [
   {
     "title": "Trend name",
     "description": "One sentence why it matters",
-    "source": "article source",
-    "source_url": "https://exact.url.from.articles.above",
+    "primary_source": "article source name",
+    "primary_source_url": "https://url.of.primary.article",
+    "coverage_article_indices": [0, 3, 5],
     "category": "fashion|music|pop-culture|lifestyle|wellness|beauty",
     "cultural_significance": "Brief impact explanation",
     "angles": ["Specific UGC/content hook #1", "Brand collaboration angle", "Content series idea"]
@@ -42,15 +43,12 @@ ${itemsText}`
     
     content = content.replace(/```json/g, "").replace(/```/g, "").trim();
     
-    // Try to find and parse JSON array more carefully
     let trends = [];
     try {
-      // First, try to find a complete JSON array
       const jsonMatch = content.match(/\[\s*\{[\s\S]*?\}\s*\]/);
       if (jsonMatch) {
         trends = JSON.parse(jsonMatch[0]);
       } else {
-        // Fallback: try to extract from first [ to last ]
         const simpleMatch = content.match(/\[[\s\S]*\]/);
         if (simpleMatch) {
           trends = JSON.parse(simpleMatch[0]);
@@ -68,26 +66,44 @@ ${itemsText}`
       return [];
     }
 
-    // Map Claude's response trends back to original items to ensure source_url is correct
+    // Enrich trends with coverage sources array
     const enrichedTrends = trends.map(trend => {
-      // Find matching item by title similarity
-      const matchingItem = items.find(item => 
-        item.title.toLowerCase().includes(trend.title.toLowerCase().substring(0, 20)) ||
-        trend.title.toLowerCase().includes(item.title.toLowerCase().substring(0, 20))
-      );
+      const coverageArticles = [];
       
+      // Get all articles that support this trend
+      if (trend.coverage_article_indices && Array.isArray(trend.coverage_article_indices)) {
+        trend.coverage_article_indices.forEach(idx => {
+          if (items[idx]) {
+            coverageArticles.push({
+              title: items[idx].title,
+              source: items[idx].source,
+              source_url: items[idx].source_url
+            });
+          }
+        });
+      }
+
       return {
-        ...trend,
-        source_url: matchingItem?.source_url || trend.source_url,
+        title: trend.title,
+        description: trend.description,
+        source: trend.primary_source || 'Multiple Sources',
+        source_url: trend.primary_source_url || (coverageArticles[0]?.source_url || ''),
+        coverage_sources: coverageArticles.length > 0 ? coverageArticles : [{ source: trend.primary_source, source_url: trend.primary_source_url }],
+        category: trend.category,
+        cultural_significance: trend.cultural_significance,
+        angles: trend.angles || []
       };
     });
 
-    console.log(`[Analyzer] Extracted ${enrichedTrends.length} trends`);
+    console.log(`[Analyzer] Extracted ${enrichedTrends.length} trends with coverage info`);
     return enrichedTrends;
-  } catch (err) {
-    console.error(`[Analyzer] Error: ${err.message}`);
-    return [];
+
+  } catch (error) {
+    console.error(`[Analyzer] Error:`, error);
+    throw error;
   }
 }
 
-module.exports = { analyzeContent };
+module.exports = {
+  analyzeContent
+};
