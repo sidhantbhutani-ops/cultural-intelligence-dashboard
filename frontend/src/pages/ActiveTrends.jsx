@@ -5,7 +5,7 @@ import { Modal } from '../components/Modal';
 import { Input } from '../components/Input';
 import { Spinner } from '../components/Spinner';
 import { Toast } from '../components/Toast';
-import { getTrends, getTeamMembers, api } from '../api';
+import { getTrends, api } from '../api';
 
 export const ActiveTrends = () => {
   const [trends, setTrends] = useState([]);
