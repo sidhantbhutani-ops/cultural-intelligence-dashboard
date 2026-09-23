@@ -13,7 +13,7 @@ async function analyzeContent(items) {
 
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 3000,
+      max_tokens: 12000,
       messages: [
         {
           role: 'user',
@@ -58,6 +58,8 @@ ${itemsText}`
       }
     } catch (parseErr) {
       console.error(`[Analyzer] JSON parse failed: ${parseErr.message}`);
+      console.error(`[Analyzer] Raw response (first 500 chars): ${content.substring(0, 500)}`);
+      console.error(`[Analyzer] Raw response (last 500 chars): ${content.substring(Math.max(0, content.length - 500))}`);
       return [];
     }
 
