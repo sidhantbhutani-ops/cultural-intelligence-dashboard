@@ -14,37 +14,22 @@ export const ActiveTrends = () => {
   const [selectedTrend, setSelectedTrend] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [teamMembers, setTeamMembers] = useState({});
 
   useEffect(() => {
     loadTrends();
-    loadTeamMembers();
   }, []);
 
   const loadTrends = async () => {
     try {
       setLoading(true);
       const trendsData = await getTrends();
-      setTrends(trendsData);
-      setFilteredTrends(trendsData);
+      setTrends(trendsData || []);
+      setFilteredTrends(trendsData || []);
     } catch (error) {
       Toast.error('Failed to load trends');
       console.error('Load trends error:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadTeamMembers = async () => {
-    try {
-      const data = await getTeamMembers();
-      const memberMap = {};
-      (data.team_members || []).forEach(m => {
-        memberMap[m.id] = m.name;
-      });
-      setTeamMembers(memberMap);
-    } catch (error) {
-      console.error('Failed to load team members');
     }
   };
 
@@ -78,10 +63,6 @@ export const ActiveTrends = () => {
   const handleCloseModal = () => {
     setShowDetailModal(false);
     setSelectedTrend(null);
-  };
-
-  const handleUpdate = () => {
-    loadTrends();
   };
 
   const handlePickUp = async (trendId) => {
