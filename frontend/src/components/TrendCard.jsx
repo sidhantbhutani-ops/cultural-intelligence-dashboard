@@ -2,6 +2,12 @@ import { Badge } from './Badge';
 import { SpectrumViz } from './SpectrumViz';
 
 export const TrendCard = ({ trend, onClick, onPickUp }) => {
+  // Parse coverage_sources if it's a string
+  const coverageSources = typeof trend.coverage_sources === 'string' 
+    ? JSON.parse(trend.coverage_sources) 
+    : (trend.coverage_sources || []);
+  const sourceCount = coverageSources.length;
+
   return (
     <div 
       onClick={onClick}
@@ -23,6 +29,14 @@ export const TrendCard = ({ trend, onClick, onPickUp }) => {
             >
               Read Article →
             </a>
+            {sourceCount > 0 && (
+              <>
+                <span className="text-gray-400">•</span>
+                <span className="text-gray-600 font-medium">
+                  Covered by {sourceCount} source{sourceCount !== 1 ? 's' : ''}
+                </span>
+              </>
+            )}
           </div>
           <Badge variant="primary" size="sm" className="mb-3">{trend.category}</Badge>
         </div>
