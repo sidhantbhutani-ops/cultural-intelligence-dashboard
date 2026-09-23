@@ -1,26 +1,51 @@
 const express = require('express');
-const { getTrends, getTrendById, getArchive, pickUpTrend } = require('../controllers/trendController');
-const { createAction } = require('../controllers/actionController');
-const authMiddleware = require('../middleware/auth');
+const { supabase } = require('../config/supabase');
+const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Apply auth to all routes
-router.use(authMiddleware);
+// Get all trends
+router.get('/', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('trends')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-// GET active trends
-router.get('/', getTrends);
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
-// GET archive (MUST come before /:id)
-router.get('/archive', getArchive);
+// Toggle pick up
+router.post('/:id/pick', authMiddleware, async (req, res) => {
+  try {
+    const { data: trend } = await supabase
+      .from('trends')
+      .select('picked_up')
+      .eq('id', req.params.id)
+      .single();
 
-// GET single trend
-router.get('/:id', getTrendById);
+    if (!trend) {
+      return res.status(404).json({ error: 'Trend not found' });
+    }
 
-// POST action on trend
-router.post('/:id/actions', createAction);
+    const newPickedState = !trend.picked_up;
+    const { error } = await supabase
+      .from('trends')
+      .update({
+        picked_up: newPickedState,
+        picked_at: newPickedState ? new Date().toISOString() : null
+      })
+      .eq('id', req.params.id);
 
-// PATCH pick up a trend
-router.patch('/:trendId/pickup', pickUpTrend);
+    if (error) throw error;
+    res.json({ success: true, picked_up: newPickedState });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 module.exports = router;
