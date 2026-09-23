@@ -40,7 +40,7 @@ async function fetchRss(source) {
       items = parsed.feed[0].entry;
     }
 
-    const content = items.slice(0, 5).map((item, idx) => {
+    const content = items.slice(0, 20).map((item, idx) => {
       // Debug: log the structure of item.link
       logger.info(`[RSS] ${source.name} item ${idx}: link structure = ${JSON.stringify(item.link?.slice(0, 2))}`);
 
