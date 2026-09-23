@@ -1,33 +1,26 @@
-const { query } = require('../config/supabase.js');
+const { supabase } = require('../config/supabase.js');
 
 async function isDuplicate(title, source_url, source) {
   try {
-    const result = await query(
-      `SELECT id FROM trends 
-       WHERE LOWER(title) = LOWER($1) 
-       AND source_url = $2 
-       AND archived_at IS NULL`,
-      [title, source_url]
-    );
+    // Use .ilike() instead of LOWER() for case-insensitive matching
+    const { data, error } = await supabase
+      .from('trends')
+      .select('id')
+      .ilike('title', title)
+      .eq('source_url', source_url)
+      .is('archived_at', null);
 
-    if (result.rows.length > 0) {
-      console.log(`[Dedup] Found duplicate: "${title}" from ${source}`);
+    if (error) throw error;
+
+    if (data && data.length > 0) {
+      console.log(`[Dedup] Found duplicate: "${title.substring(0, 50)}..." from ${source}`);
       return true;
     }
 
     return false;
   } catch (err) {
     console.warn(`[Dedup] Duplicate check failed: ${err.message}`);
-    
-    const result = await query(
-      `SELECT id FROM trends 
-       WHERE LOWER(title) = LOWER($1) 
-       AND source_url = $2 
-       AND archived_at IS NULL`,
-      [title, source_url]
-    );
-
-    return result.rows.length > 0;
+    return false;
   }
 }
 
