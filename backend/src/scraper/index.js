@@ -105,6 +105,7 @@ async function storeAnalyzedTrends(trends, runId) {
 
   for (const trend of trends) {
     try {
+      // Map analyzer output fields to DB column names
       const { rows } = await supabase.query(
         `INSERT INTO trends (title, source, source_url, description, category, angles, happening, cultural_significance, coverage_sources, created_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -112,14 +113,14 @@ async function storeAnalyzedTrends(trends, runId) {
          RETURNING id`,
         [
           trend.title,
-          trend.source,
-          trend.source_url,
+          trend.primary_source,                    // ← Map primary_source → source
+          trend.primary_source_url,                // ← Map primary_source_url → source_url
           trend.description,
           trend.category,
           trend.angles || [],
           'active',
           trend.cultural_significance || 'emerging',
-          JSON.stringify(trend.coverage_sources || []),
+          JSON.stringify(trend.coverage_article_indices || []),  // ← Map coverage_article_indices → coverage_sources
           new Date().toISOString(),
         ]
       );
@@ -129,7 +130,12 @@ async function storeAnalyzedTrends(trends, runId) {
         const trendId = rows[0].id;
 
         // Auto-score async (non-blocking)
-        scoreTrend({ id: trendId, ...trend }).catch((err) => {
+        scoreTrend({ 
+          id: trendId, 
+          title: trend.title,
+          description: trend.description,
+          category: trend.category 
+        }).catch((err) => {
           console.warn(`[${runId}] Scoring error for trend ${trendId}:`, err.message);
         });
       }
