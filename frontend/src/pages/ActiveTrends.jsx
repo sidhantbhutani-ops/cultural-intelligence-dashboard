@@ -67,7 +67,7 @@ export const ActiveTrends = () => {
 
   const handlePickUp = async (trendId) => {
     try {
-      await api(`/trends/${trendId}/pick`, { method: 'POST' });
+      await api.post(`/trends/${trendId}/pick`);
       loadTrends();
     } catch (error) {
       Toast.error('Failed to update trend');
