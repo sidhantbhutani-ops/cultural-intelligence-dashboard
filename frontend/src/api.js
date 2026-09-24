@@ -1,40 +1,105 @@
 const API_BASE = import.meta.env.VITE_API_URL || 'https://cultural-intelligence-dashboard.onrender.com/api';
 
-export const getToken = () => localStorage.getItem('auth_token');
+// Auth
+export async function login(email, password) {
+  const response = await fetch(`${API_BASE}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!response.ok) throw new Error('Login failed');
+  const data = await response.json();
+  localStorage.setItem('token', data.token);
+  return data;
+}
 
-export const api = async (endpoint, options = {}) => {
-  const token = getToken();
-  const headers = {
-    'Content-Type': 'application/json',
-    ...options.headers,
-  };
+export function logout() {
+  localStorage.removeItem('token');
+}
 
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
+export function getAuthToken() {
+  return localStorage.getItem('token');
+}
 
-  try {
-    const response = await fetch(`${API_BASE}${endpoint}`, {
-      ...options,
-      headers,
-    });
+// Trends
+export async function getTrends() {
+  const response = await fetch(`${API_BASE}/trends`, {
+    headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+  });
+  if (!response.ok) throw new Error('Failed to fetch trends');
+  const data = await response.json();
+  return Array.isArray(data) ? data : data.data || [];
+}
 
-    if (!response.ok) {
-      if (response.status === 401) {
-        localStorage.removeItem('auth_token');
-        window.location.href = '/login';
-      }
-      throw new Error(`API Error: ${response.status}`);
-    }
+export async function getTrendDetail(id) {
+  const response = await fetch(`${API_BASE}/trends/${id}`, {
+    headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+  });
+  if (!response.ok) throw new Error('Failed to fetch trend');
+  return response.json();
+}
 
-    return await response.json();
-  } catch (error) {
-    console.error('API call failed:', error);
-    throw error;
-  }
-};
+export async function pickupTrend(id) {
+  const response = await fetch(`${API_BASE}/trends/${id}/pick`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+  });
+  if (!response.ok) throw new Error('Failed to pickup trend');
+  return response.json();
+}
 
-export const getTrends = async (params = {}) => {
-  const response = await api('/trends');
-  return Array.isArray(response) ? response : response.data || [];
-};
+// Archive
+export async function getArchive() {
+  const response = await fetch(`${API_BASE}/trends/archive`, {
+    headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+  });
+  if (!response.ok) throw new Error('Failed to fetch archive');
+  const data = await response.json();
+  return Array.isArray(data) ? data : data.data || [];
+}
+
+export async function archiveTrend(id) {
+  const response = await fetch(`${API_BASE}/trends/${id}/archive`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+  });
+  if (!response.ok) throw new Error('Failed to archive trend');
+  return response.json();
+}
+
+// Scraper
+export async function getScraperStatus() {
+  const response = await fetch(`${API_BASE}/scraper/status`, {
+    headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+  });
+  if (!response.ok) throw new Error('Failed to fetch scraper status');
+  return response.json();
+}
+
+export async function triggerScraper() {
+  const response = await fetch(`${API_BASE}/scraper/run`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+  });
+  if (!response.ok) throw new Error('Failed to trigger scraper');
+  return response.json();
+}
+
+export async function cancelScraper() {
+  const response = await fetch(`${API_BASE}/scraper/cancel`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+  });
+  if (!response.ok) throw new Error('Failed to cancel scraper');
+  return response.json();
+}
+
+// Team members
+export async function getTeamMembers() {
+  const response = await fetch(`${API_BASE}/team/members`, {
+    headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+  });
+  if (!response.ok) throw new Error('Failed to fetch team members');
+  const data = await response.json();
+  return Array.isArray(data) ? data : data.data || [];
+}
