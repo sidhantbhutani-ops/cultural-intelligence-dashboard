@@ -1,6 +1,14 @@
 const API_BASE = import.meta.env.VITE_API_URL || 'https://cultural-intelligence-dashboard.onrender.com/api';
 
-// Auth
+// ========== Auth & Token ==========
+export function getToken() {
+  return localStorage.getItem('token');
+}
+
+export function setToken(token) {
+  localStorage.setItem('token', token);
+}
+
 export async function login(email, password) {
   const response = await fetch(`${API_BASE}/auth/login`, {
     method: 'POST',
@@ -9,7 +17,7 @@ export async function login(email, password) {
   });
   if (!response.ok) throw new Error('Login failed');
   const data = await response.json();
-  localStorage.setItem('token', data.token);
+  setToken(data.token);
   return data;
 }
 
@@ -17,14 +25,47 @@ export function logout() {
   localStorage.removeItem('token');
 }
 
-export function getAuthToken() {
-  return localStorage.getItem('token');
-}
+// ========== Axios-like instance (for backwards compatibility) ==========
+export const api = {
+  get: async (url, config = {}) => {
+    const response = await fetch(`${API_BASE}${url}`, {
+      headers: { 'Authorization': `Bearer ${getToken()}`, ...config.headers },
+    });
+    if (!response.ok) throw new Error(`GET ${url} failed`);
+    return { data: await response.json() };
+  },
+  post: async (url, data, config = {}) => {
+    const response = await fetch(`${API_BASE}${url}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}`, ...config.headers },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error(`POST ${url} failed`);
+    return { data: await response.json() };
+  },
+  put: async (url, data, config = {}) => {
+    const response = await fetch(`${API_BASE}${url}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}`, ...config.headers },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error(`PUT ${url} failed`);
+    return { data: await response.json() };
+  },
+  delete: async (url, config = {}) => {
+    const response = await fetch(`${API_BASE}${url}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${getToken()}`, ...config.headers },
+    });
+    if (!response.ok) throw new Error(`DELETE ${url} failed`);
+    return { data: await response.json() };
+  },
+};
 
-// Trends
+// ========== Trends ==========
 export async function getTrends() {
   const response = await fetch(`${API_BASE}/trends`, {
-    headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+    headers: { 'Authorization': `Bearer ${getToken()}` },
   });
   if (!response.ok) throw new Error('Failed to fetch trends');
   const data = await response.json();
@@ -33,7 +74,7 @@ export async function getTrends() {
 
 export async function getTrendDetail(id) {
   const response = await fetch(`${API_BASE}/trends/${id}`, {
-    headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+    headers: { 'Authorization': `Bearer ${getToken()}` },
   });
   if (!response.ok) throw new Error('Failed to fetch trend');
   return response.json();
@@ -42,16 +83,20 @@ export async function getTrendDetail(id) {
 export async function pickupTrend(id) {
   const response = await fetch(`${API_BASE}/trends/${id}/pick`, {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+    headers: { 'Authorization': `Bearer ${getToken()}` },
   });
   if (!response.ok) throw new Error('Failed to pickup trend');
   return response.json();
 }
 
-// Archive
+export async function markPickedUp(id) {
+  return pickupTrend(id);
+}
+
+// ========== Archive ==========
 export async function getArchive() {
   const response = await fetch(`${API_BASE}/trends/archive`, {
-    headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+    headers: { 'Authorization': `Bearer ${getToken()}` },
   });
   if (!response.ok) throw new Error('Failed to fetch archive');
   const data = await response.json();
@@ -61,16 +106,16 @@ export async function getArchive() {
 export async function archiveTrend(id) {
   const response = await fetch(`${API_BASE}/trends/${id}/archive`, {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+    headers: { 'Authorization': `Bearer ${getToken()}` },
   });
   if (!response.ok) throw new Error('Failed to archive trend');
   return response.json();
 }
 
-// Scraper
+// ========== Scraper ==========
 export async function getScraperStatus() {
   const response = await fetch(`${API_BASE}/scraper/status`, {
-    headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+    headers: { 'Authorization': `Bearer ${getToken()}` },
   });
   if (!response.ok) throw new Error('Failed to fetch scraper status');
   return response.json();
@@ -79,7 +124,7 @@ export async function getScraperStatus() {
 export async function triggerScraper() {
   const response = await fetch(`${API_BASE}/scraper/run`, {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+    headers: { 'Authorization': `Bearer ${getToken()}` },
   });
   if (!response.ok) throw new Error('Failed to trigger scraper');
   return response.json();
@@ -88,18 +133,33 @@ export async function triggerScraper() {
 export async function cancelScraper() {
   const response = await fetch(`${API_BASE}/scraper/cancel`, {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+    headers: { 'Authorization': `Bearer ${getToken()}` },
   });
   if (!response.ok) throw new Error('Failed to cancel scraper');
   return response.json();
 }
 
-// Team members
+// ========== Team (stubs - not implemented in backend) ==========
 export async function getTeamMembers() {
-  const response = await fetch(`${API_BASE}/team/members`, {
-    headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+  console.warn('Team members endpoint not implemented');
+  return [];
+}
+
+export async function assignTrend(trendId, userId) {
+  console.warn('Assign trend endpoint not implemented');
+  return null;
+}
+
+export async function unassignTrend(trendId, userId) {
+  console.warn('Unassign trend endpoint not implemented');
+  return null;
+}
+
+// ========== Sources ==========
+export async function getSources() {
+  const response = await fetch(`${API_BASE}/sources`, {
+    headers: { 'Authorization': `Bearer ${getToken()}` },
   });
-  if (!response.ok) throw new Error('Failed to fetch team members');
-  const data = await response.json();
-  return Array.isArray(data) ? data : data.data || [];
+  if (!response.ok) throw new Error('Failed to fetch sources');
+  return response.json();
 }
