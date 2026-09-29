@@ -1,6 +1,9 @@
 const { fetchRss } = require('./fetchers/rss');
 const { fetchHtml } = require('./fetchers/html');
 const { fetchReddit } = require('./fetchers/reddit');
+const { fetchTwitter } = require('./fetchers/twitter');
+const { fetchApi } = require('./fetchers/api');
+const { fetchHtmlImproved } = require('./fetchers/html-improved');
 const { dedupItems } = require('./deduplicator');
 const { analyzeContent } = require('./analyzer');
 const supabase = require('../config/supabase');
@@ -15,7 +18,6 @@ async function runScraper(passedRunId) {
   try {
     console.log(`[${runId}] Starting scraper run...`);
 
-    // Fetch all active sources
     const { rows: sources } = await supabase.query(
       `SELECT * FROM scraper_sources WHERE is_active = true`
     );
@@ -26,7 +28,6 @@ async function runScraper(passedRunId) {
 
     console.log(`[${runId}] Found ${sources.length} active sources`);
 
-    // Fetch from all sources in parallel
     const allItems = [];
     const fetchPromises = sources.map(async (source) => {
       try {
@@ -36,6 +37,12 @@ async function runScraper(passedRunId) {
           items = await fetchRss(source);
         } else if (source.scrape_strategy === 'html') {
           items = await fetchHtml(source);
+        } else if (source.scrape_strategy === 'html_improved') {
+          items = await fetchHtmlImproved(source);
+        } else if (source.scrape_strategy === 'twitter') {
+          items = await fetchTwitter(source);
+        } else if (source.scrape_strategy === 'api') {
+          items = await fetchApi(source);
         } else if (source.scrape_strategy === 'reddit') {
           items = await fetchReddit(source);
         } else {
@@ -60,7 +67,6 @@ async function runScraper(passedRunId) {
 
     console.log(`[${runId}] Fetched ${allItems.length} total items`);
 
-    // Deduplicate
     const uniqueItems = await dedupItems(allItems);
     console.log(`[${runId}] Deduplicated to ${uniqueItems.length} unique items`);
 
@@ -69,11 +75,9 @@ async function runScraper(passedRunId) {
       return { runId, success: true, itemsFetched: totalItemsFetched, trendsCreated: 0, storedTrends: [] };
     }
 
-    // Analyze with Claude
     const analyzedTrends = await analyzeContent(uniqueItems);
     console.log(`[${runId}] Analyzed ${analyzedTrends.length} trends`);
 
-    // Store trends and auto-score
     totalTrendsCreated = await storeAnalyzedTrends(analyzedTrends, runId);
 
     await logRun(runId, 'completed', totalItemsFetched, totalTrendsCreated, uniqueItems.length - totalTrendsCreated, null, Date.now() - startTime);
@@ -84,6 +88,50 @@ async function runScraper(passedRunId) {
     await logRun(runId, 'failed', totalItemsFetched, totalTrendsCreated, 0, error.message, Date.now() - startTime);
     throw error;
   }
+}
+
+async function storeAnalyzedTrends(trends, runId) {
+  let createdCount = 0;
+
+  for (const trend of trends) {
+    try {
+      const { rows } = await supabase.query(
+        `INSERT INTO trends 
+         (title, description, category, source, source_url, angles, cultural_significance, coverage_sources, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         RETURNING id`,
+        [
+          trend.title,
+          trend.description,
+          trend.category,
+          trend.primary_source || 'unknown',
+          trend.primary_source_url || trend.url || '',
+          JSON.stringify(trend.angles || []),
+          trend.cultural_significance || 'emerging',
+          JSON.stringify(trend.coverage_article_indices || []),
+          new Date().toISOString(),
+        ]
+      );
+
+      if (rows && rows.length > 0) {
+        createdCount++;
+        const trendId = rows[0].id;
+
+        scoreTrend({
+          id: trendId,
+          title: trend.title,
+          description: trend.description,
+          category: trend.category
+        }).catch((err) => {
+          console.warn(`[${runId}] Scoring error for trend ${trendId}:`, err.message);
+        });
+      }
+    } catch (error) {
+      console.error(`[${runId}] Error storing trend:`, error.message);
+    }
+  }
+
+  return createdCount;
 }
 
 async function logRun(runId, status, itemsFetched, trendsCreated, trendsSkipped, error, durationMs) {
@@ -99,52 +147,9 @@ async function logRun(runId, status, itemsFetched, trendsCreated, trendsSkipped,
   }
 }
 
-async function storeAnalyzedTrends(trends, runId) {
-  let createdCount = 0;
-  const { scoreTrend } = require('../services/spectrumScorer');
-
-  for (const trend of trends) {
-    try {
-      // Map analyzer output fields to DB column names
-      const { rows } = await supabase.query(
-        `INSERT INTO trends (title, source, source_url, description, category, angles, happening, cultural_significance, coverage_sources, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-         ON CONFLICT (source_url) DO NOTHING
-         RETURNING id`,
-        [
-          trend.title,
-          trend.primary_source,                    // ← Map primary_source → source
-          trend.primary_source_url,                // ← Map primary_source_url → source_url
-          trend.description,
-          trend.category,
-          trend.angles || [],
-          'active',
-          trend.cultural_significance || 'emerging',
-          JSON.stringify(trend.coverage_article_indices || []),  // ← Map coverage_article_indices → coverage_sources
-          new Date().toISOString(),
-        ]
-      );
-
-      if (rows && rows.length > 0) {
-        createdCount++;
-        const trendId = rows[0].id;
-
-        // Auto-score async (non-blocking)
-        scoreTrend({ 
-          id: trendId, 
-          title: trend.title,
-          description: trend.description,
-          category: trend.category 
-        }).catch((err) => {
-          console.warn(`[${runId}] Scoring error for trend ${trendId}:`, err.message);
-        });
-      }
-    } catch (error) {
-      console.error(`[${runId}] Error storing trend:`, error.message);
-    }
-  }
-
-  return createdCount;
+async function scoreTrend(trend) {
+  const { spectrumScore } = require('../services/spectrumScorer');
+  return await spectrumScore(trend);
 }
 
 module.exports = { runScraper, run: runScraper };
