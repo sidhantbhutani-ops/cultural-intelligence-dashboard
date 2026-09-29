@@ -2,27 +2,28 @@ name: Daily Scraper Run
 
 on:
   schedule:
-    # Run every day at 6 AM UTC (1:30 PM IST)
-    - cron: '0 6 * * *'
-  workflow_dispatch:  # Manual trigger from GitHub dashboard
+    - cron: '0 6 * * *'  # 6 AM UTC = 1:30 PM IST
+  workflow_dispatch:
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      - name: Set up Node.js
+
+      - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-      
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'backend/package-lock.json'
+
       - name: Install dependencies
         working-directory: ./backend
-        run: npm install --omit=dev
-      
+        run: npm ci
+
       - name: Run scraper
         working-directory: ./backend
         env:
@@ -30,7 +31,3 @@ jobs:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: node -e "const {runScraper} = require('./src/scraper'); runScraper().then(r => console.log('✅ Completed:', r.trendsCreated, 'trends created')).catch(e => { console.error('❌ Failed:', e.message); process.exit(1); })"
-      
-      - name: Log results
-        if: always()
-        run: echo "Scraper job completed"
