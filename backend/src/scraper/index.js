@@ -13,7 +13,6 @@ async function runScraper(passedRunId) {
   const startTime = Date.now();
   let totalItemsFetched = 0;
   let totalTrendsCreated = 0;
-  let errorMessage = null;
 
   try {
     console.log(`[${runId}] Starting scraper run...`);
@@ -98,7 +97,7 @@ async function storeAnalyzedTrends(trends, runId) {
       const { rows } = await supabase.query(
         `INSERT INTO trends 
          (title, description, category, source, source_url, angles, cultural_significance, coverage_sources, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8::jsonb, $9)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          RETURNING id`,
         [
           trend.title,
@@ -106,9 +105,9 @@ async function storeAnalyzedTrends(trends, runId) {
           trend.category,
           trend.primary_source || 'unknown',
           trend.primary_source_url || trend.url || '',
-          JSON.stringify(trend.angles || []),
+          trend.angles || [],
           trend.cultural_significance || 'emerging',
-          JSON.stringify(trend.coverage_article_indices || []),
+          trend.coverage_article_indices || [],
           new Date().toISOString(),
         ]
       );
