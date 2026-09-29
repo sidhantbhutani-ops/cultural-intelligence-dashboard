@@ -30,7 +30,7 @@ export default function Sources() {
   const fetchSources = async () => {
     try {
       setLoading(true);
-      const response = await api('/admin/sources');
+      const response = await api.get('/admin/sources');
       const sourcesArray = response.data?.sources || [];
       setSources(sourcesArray);
     } catch (error) {
@@ -45,10 +45,7 @@ export default function Sources() {
   const handleAddSource = async (e) => {
     e.preventDefault();
     try {
-      await api('/admin/sources', {
-        method: 'POST',
-        body: JSON.stringify(newSource),
-      });
+      await api.post('/admin/sources', newSource);
       setToast({ type: 'success', message: 'Source added successfully' });
       setShowAddModal(false);
       setNewSource({
@@ -71,10 +68,7 @@ export default function Sources() {
   const handleUpdateSource = async (id) => {
     try {
       const sourceToUpdate = sources.find(s => s.id === id);
-      await api(`/admin/sources/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(sourceToUpdate),
-      });
+      await api.put(`/admin/sources/${id}`, sourceToUpdate);
       setToast({ type: 'success', message: 'Source updated successfully' });
       setEditingId(null);
       fetchSources();
@@ -87,9 +81,13 @@ export default function Sources() {
   const handleDeleteSource = async (id) => {
     if (window.confirm('Are you sure?')) {
       try {
-        await api(`/admin/sources/${id}`, {
+        // DELETE not implemented in api object, use fetch directly
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://cultural-intelligence-dashboard.onrender.com/api'}/admin/sources/${id}`, {
           method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` },
         });
+        if (!response.ok) throw new Error('Failed to delete');
         setToast({ type: 'success', message: 'Source deleted' });
         fetchSources();
       } catch (error) {
