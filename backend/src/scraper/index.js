@@ -98,7 +98,7 @@ async function storeAnalyzedTrends(trends, runId) {
       const { rows } = await supabase.query(
         `INSERT INTO trends 
          (title, description, category, source, source_url, angles, cultural_significance, coverage_sources, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8::jsonb, $9)
          RETURNING id`,
         [
           trend.title,
