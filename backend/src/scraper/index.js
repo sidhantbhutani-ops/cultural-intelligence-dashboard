@@ -91,54 +91,48 @@ async function runScraper(passedRunId) {
 
 async function storeAnalyzedTrends(trends, runId) {
   let createdCount = 0;
-  let skippedCount = 0;
+  const dbTrends = trends.map(t => ({
+    title: t.title,
+    description: t.description,
+    category: t.category,
+    source: t.primary_source,
+    source_url: t.primary_source_url,
+    angles: t.angles,
+    cultural_significance: t.cultural_significance,
+    coverage_sources: t.coverage_article_indices,
+    happening: true
+  }));
 
-  for (const trend of trends) {
+  for (const trend of dbTrends) {
     try {
       const { rows } = await supabase.query(
         `INSERT INTO trends 
          (title, description, category, source, source_url, angles, cultural_significance, coverage_sources, happening, created_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          RETURNING id`,
-        [
-          trend.title,
-          trend.description,
-          trend.category,
-          trend.primary_source || 'unknown',
-          trend.primary_source_url || trend.url || '',
-          trend.angles || [],
-          trend.cultural_significance || 'emerging',
-          trend.coverage_article_indices || [],
-          true,
-          new Date().toISOString(),
-        ]
+        [trend.title, trend.description, trend.category, trend.source, trend.source_url, trend.angles, trend.cultural_significance, trend.coverage_sources, trend.happening, new Date().toISOString()]
       );
 
       if (rows && rows.length > 0) {
         createdCount++;
         const trendId = rows[0].id;
-
-        scoreTrend({
-          id: trendId,
-          title: trend.title,
-          description: trend.description,
-          category: trend.category
-        }).catch((err) => {
-          console.warn(`[${runId}] Scoring error for trend ${trendId}:`, err.message);
-        });
+        setTimeout(() => scoreTrend(trends.find(t => t.title === trend.title)), 100);
       }
-    } catch (error) {
-      // Silently skip duplicate URLs (unique constraint violation)
-      if (error.message && error.message.includes('duplicate key')) {
-        skippedCount++;
+    } catch (err) {
+      if (err.message?.includes('duplicate key')) {
+        console.log(`[${runId}] Skipped duplicate: ${trend.source_url}`);
       } else {
-        console.error(`[${runId}] Error storing trend:`, error.message);
+        console.error(`[${runId}] Failed to insert trend: ${err.message}`);
       }
     }
   }
 
-  if (skippedCount > 0) {
-    console.log(`[${runId}] Skipped ${skippedCount} duplicate URLs`);
+  if (createdCount > 0) {
+    const skippedCount = dbTrends.length - createdCount;
+    console.log(`[${runId}] Created ${createdCount} trends, skipped ${skippedCount} duplicates`);
+    if (skippedCount > 0) {
+      console.log(`[${runId}] Skipped ${skippedCount} duplicate URLs`);
+    }
   }
 
   return createdCount;
@@ -146,12 +140,14 @@ async function storeAnalyzedTrends(trends, runId) {
 
 async function logRun(runId, status, itemsFetched, trendsCreated, trendsSkipped, error, durationMs) {
   try {
+    const now = new Date().toISOString();
     await supabase.query(
       `INSERT INTO scraper_logs 
        (run_id, status, trends_found, trends_created, trends_skipped, error_message, duration_seconds, started_at, completed_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
-      [runId, status, itemsFetched, trendsCreated, trendsSkipped, error, Math.ceil(durationMs / 1000)]
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [runId, status, itemsFetched, trendsCreated, trendsSkipped, error, Math.ceil(durationMs / 1000), now, now]
     );
+    console.log(`[${runId}] ✅ Logged run to scraper_logs`);
   } catch (err) {
     console.error(`[${runId}] Failed to log run: ${err.message}`);
   }
