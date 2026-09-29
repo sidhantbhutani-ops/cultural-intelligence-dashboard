@@ -91,6 +91,7 @@ async function runScraper(passedRunId) {
 
 async function storeAnalyzedTrends(trends, runId) {
   let createdCount = 0;
+  let skippedCount = 0;
 
   for (const trend of trends) {
     try {
@@ -127,8 +128,17 @@ async function storeAnalyzedTrends(trends, runId) {
         });
       }
     } catch (error) {
-      console.error(`[${runId}] Error storing trend:`, error.message);
+      // Silently skip duplicate URLs (unique constraint violation)
+      if (error.message && error.message.includes('duplicate key')) {
+        skippedCount++;
+      } else {
+        console.error(`[${runId}] Error storing trend:`, error.message);
+      }
     }
+  }
+
+  if (skippedCount > 0) {
+    console.log(`[${runId}] Skipped ${skippedCount} duplicate URLs`);
   }
 
   return createdCount;
@@ -148,8 +158,8 @@ async function logRun(runId, status, itemsFetched, trendsCreated, trendsSkipped,
 }
 
 async function scoreTrend(trend) {
-  const { spectrumScore } = require('../services/spectrumScorer');
-  return await spectrumScore(trend);
+  const { scoreTrend: scoreFunc } = require('../services/spectrumScorer');
+  return await scoreFunc(trend);
 }
 
 module.exports = { runScraper, run: runScraper };
