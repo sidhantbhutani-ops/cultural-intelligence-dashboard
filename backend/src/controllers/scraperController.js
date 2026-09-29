@@ -1,23 +1,23 @@
-const { query } = require('../config/supabase.js');
+const { supabase } = require('../config/supabase.js');
 const { v4: uuidv4 } = require('uuid');
 const runScraper = require('../scraper/index.js');
 const { sendDailyTrendsReport } = require('../utils/slackNotifier.js');
 
 async function getStatus(req, res) {
   try {
-    const result = await query(
-      `SELECT id, run_id, status, started_at, completed_at, trends_found, 
-              trends_created, trends_skipped, error_message, duration_seconds
-       FROM scraper_logs
-       ORDER BY started_at DESC
-       LIMIT 5`
-    );
+    const { data, error } = await supabase
+      .from('scraper_logs')
+      .select('*')
+      .order('started_at', { ascending: false })
+      .limit(10);
 
-    const lastRuns = result.rows.map(row => ({
+    if (error) throw error;
+
+    const lastRuns = (data || []).map(row => ({
       runId: row.run_id,
       status: row.status,
-      startedAt: row.started_at.endsWith('Z') ? row.started_at : row.started_at + 'Z',
-      completedAt: row.completed_at ? (row.completed_at.endsWith('Z') ? row.completed_at : row.completed_at + 'Z') : null,
+      startedAt: row.started_at,
+      completedAt: row.completed_at,
       itemsFetched: row.trends_found,
       trendsCreated: row.trends_created,
       trendsSkipped: row.trends_skipped,
