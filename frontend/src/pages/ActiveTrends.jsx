@@ -5,9 +5,12 @@ import { Modal } from '../components/Modal';
 import { Input } from '../components/Input';
 import { Spinner } from '../components/Spinner';
 import { Toast } from '../components/Toast';
+import MicroTrendsTab from '../components/MicroTrendsTab';
 import { getTrends, api } from '../api';
+import './ActiveTrends.css';
 
 export const ActiveTrends = () => {
+  const [activeTab, setActiveTab] = useState('editorial');
   const [trends, setTrends] = useState([]);
   const [filteredTrends, setFilteredTrends] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,8 +21,10 @@ export const ActiveTrends = () => {
   const [sortDirection, setSortDirection] = useState('desc');
 
   useEffect(() => {
-    loadTrends();
-  }, []);
+    if (activeTab === 'editorial') {
+      loadTrends();
+    }
+  }, [activeTab]);
 
   const loadTrends = async () => {
     try {
@@ -38,7 +43,6 @@ export const ActiveTrends = () => {
   useEffect(() => {
     let filtered = trends;
 
-    // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(t =>
         t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -46,17 +50,13 @@ export const ActiveTrends = () => {
       );
     }
 
-    // Filter by category
     if (categoryFilter) {
       filtered = filtered.filter(t => t.category === categoryFilter);
     }
 
-    // Sort by SPECTRUM score
     filtered.sort((a, b) => {
-      const aScore = (a.velocity_score || 0) + (a.platform_score || 0) + (a.novelty_score || 0) + 
-                     (a.community_score || 0) + (a.adoption_score || 0) + (a.category_score || 0);
-      const bScore = (b.velocity_score || 0) + (b.platform_score || 0) + (b.novelty_score || 0) + 
-                     (b.community_score || 0) + (b.adoption_score || 0) + (b.category_score || 0);
+      const aScore = a.score || 0;
+      const bScore = b.score || 0;
       return sortDirection === 'desc' ? bScore - aScore : aScore - bScore;
     });
 
@@ -83,7 +83,7 @@ export const ActiveTrends = () => {
     }
   };
 
-  if (loading) {
+  if (loading && activeTab === 'editorial') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Spinner />
@@ -93,58 +93,81 @@ export const ActiveTrends = () => {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-4">
-        <Input
-          placeholder="Search trends..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-        
-        <div className="flex gap-4">
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg text-sm"
+      <div className="tabs-container">
+        <div className="tabs">
+          <button
+            className={`tab ${activeTab === 'editorial' ? 'active' : ''}`}
+            onClick={() => setActiveTab('editorial')}
           >
-            <option value="">All Categories</option>
-            <option value="pop-culture">Pop Culture</option>
-            <option value="fashion">Fashion</option>
-            <option value="wellness">Wellness</option>
-            <option value="technology">Technology</option>
-            <option value="lifestyle">Lifestyle</option>
-          </select>
-          
-          <select
-            value={sortDirection}
-            onChange={(e) => setSortDirection(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg text-sm"
+            📰 Editorial Trends
+          </button>
+          <button
+            className={`tab ${activeTab === 'micro' ? 'active' : ''}`}
+            onClick={() => setActiveTab('micro')}
           >
-            <option value="desc">SPECTRUM Score: High to Low</option>
-            <option value="asc">SPECTRUM Score: Low to High</option>
-          </select>
+            🔥 Reddit Micro-Trends
+          </button>
         </div>
       </div>
 
-      {filteredTrends.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-14 text-gray-600">No trends found</p>
-        </div>
-      ) : (
-        <div className="grid gap-4">
-          {filteredTrends.map(trend => (
-            <TrendCard 
-              key={trend.id}
-              trend={trend}
-              onClick={() => handleTrendClick(trend)}
-              onPickUp={handlePickUp}
-            />
-          ))}
+      {activeTab === 'editorial' && (
+        <div className="space-y-4">
+          <Input
+            placeholder="Search trends..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          
+          <div className="flex gap-4">
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm"
+            >
+              <option value="">All Categories</option>
+              <option value="pop-culture">Pop Culture</option>
+              <option value="fashion">Fashion</option>
+              <option value="wellness">Wellness</option>
+              <option value="technology">Technology</option>
+              <option value="lifestyle">Lifestyle</option>
+            </select>
+            
+            <select
+              value={sortDirection}
+              onChange={(e) => setSortDirection(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm"
+            >
+              <option value="desc">SPECTRUM Score: High to Low</option>
+              <option value="asc">SPECTRUM Score: Low to High</option>
+            </select>
+          </div>
+
+          {filteredTrends.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-14 text-gray-600">No trends found</p>
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {filteredTrends.map(trend => (
+                <TrendCard 
+                  key={trend.id}
+                  trend={trend}
+                  onClick={() => handleTrendClick(trend)}
+                  onPickUp={handlePickUp}
+                />
+              ))}
+            </div>
+          )}
+
+          <Modal isOpen={showDetailModal} onClose={handleCloseModal} title="Trend Details" large>
+            {selectedTrend && <TrendModal trend={selectedTrend} onClose={() => setSelectedTrend(null)} />}
+          </Modal>
         </div>
       )}
 
-      <Modal isOpen={showDetailModal} onClose={handleCloseModal} title="Trend Details" large>
-        {selectedTrend && <TrendModal trend={selectedTrend} onClose={() => setSelectedTrend(null)} />}
-      </Modal>
+      {activeTab === 'micro' && (
+        <MicroTrendsTab />
+      )}
     </div>
   );
 };
