@@ -94,13 +94,15 @@ export async function markPickedUp(id) {
 }
 
 // ========== Archive ==========
-export async function getArchive() {
-  const response = await fetch(`${API_BASE}/trends/archive`, {
+export async function getArchive(params = {}) {
+  const queryStr = new URLSearchParams(params).toString();
+  const url = queryStr ? `${API_BASE}/trends/archive?${queryStr}` : `${API_BASE}/trends/archive`;
+  const response = await fetch(url, {
     headers: { 'Authorization': `Bearer ${getToken()}` },
   });
   if (!response.ok) throw new Error('Failed to fetch archive');
   const data = await response.json();
-  return Array.isArray(data) ? data : data.data || [];
+  return data.trends || (Array.isArray(data) ? data : data.data || []);
 }
 
 export async function archiveTrend(id) {
