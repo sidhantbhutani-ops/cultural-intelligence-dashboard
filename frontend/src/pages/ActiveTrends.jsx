@@ -14,6 +14,8 @@ export const ActiveTrends = () => {
   const [selectedTrend, setSelectedTrend] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [sortDirection, setSortDirection] = useState('desc');
 
   useEffect(() => {
     loadTrends();
@@ -36,6 +38,7 @@ export const ActiveTrends = () => {
   useEffect(() => {
     let filtered = trends;
 
+    // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(t =>
         t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -43,17 +46,22 @@ export const ActiveTrends = () => {
       );
     }
 
-    // Sort by SPECTRUM score descending
+    // Filter by category
+    if (categoryFilter) {
+      filtered = filtered.filter(t => t.category === categoryFilter);
+    }
+
+    // Sort by SPECTRUM score
     filtered.sort((a, b) => {
       const aScore = (a.velocity_score || 0) + (a.platform_score || 0) + (a.novelty_score || 0) + 
                      (a.community_score || 0) + (a.adoption_score || 0) + (a.category_score || 0);
       const bScore = (b.velocity_score || 0) + (b.platform_score || 0) + (b.novelty_score || 0) + 
                      (b.community_score || 0) + (b.adoption_score || 0) + (b.category_score || 0);
-      return bScore - aScore;
+      return sortDirection === 'desc' ? bScore - aScore : aScore - bScore;
     });
 
     setFilteredTrends(filtered);
-  }, [searchTerm, trends]);
+  }, [searchTerm, categoryFilter, sortDirection, trends]);
 
   const handleTrendClick = (trend) => {
     setSelectedTrend(trend);
@@ -91,6 +99,30 @@ export const ActiveTrends = () => {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
+        
+        <div className="flex gap-4">
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg text-sm"
+          >
+            <option value="">All Categories</option>
+            <option value="pop-culture">Pop Culture</option>
+            <option value="fashion">Fashion</option>
+            <option value="wellness">Wellness</option>
+            <option value="technology">Technology</option>
+            <option value="lifestyle">Lifestyle</option>
+          </select>
+          
+          <select
+            value={sortDirection}
+            onChange={(e) => setSortDirection(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg text-sm"
+          >
+            <option value="desc">SPECTRUM Score: High to Low</option>
+            <option value="asc">SPECTRUM Score: Low to High</option>
+          </select>
+        </div>
       </div>
 
       {filteredTrends.length === 0 ? (
