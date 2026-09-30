@@ -1,0 +1,35 @@
+name: Reddit Micro-Trends Scraper
+
+on:
+  schedule:
+    # Runs at 12 AM, 3 AM, 6 AM, 9 AM, 12 PM, 3 PM, 6 PM, 9 PM UTC
+    - cron: '0 0,3,6,9,12,15,18,21 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: cd backend && npm install
+      
+      - name: Run Reddit Micro-Trends Scraper
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          cd backend
+          node -e "const { runRedditMicroScraper } = require('./src/scraper/redditMicroRunner'); runRedditMicroScraper().then(r => console.log('✅ Scrape complete:', r.run_id)).catch(e => { console.error('❌ Scrape failed:', e.message); process.exit(1); });"
+      
+      - name: Notify on failure
+        if: failure()
+        run: echo "⚠️ Reddit scraper failed. Check logs for details."
