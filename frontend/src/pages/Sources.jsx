@@ -31,7 +31,7 @@ export default function Sources() {
     try {
       setLoading(true);
       const response = await api.get('/admin/sources');
-      const sourcesArray = response.data?.sources || [];
+      const sourcesArray = response.data?.data?.sources || [];
       setSources(sourcesArray);
     } catch (error) {
       setToast({ type: 'error', message: 'Failed to fetch sources' });
