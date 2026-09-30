@@ -150,8 +150,7 @@ export default function Sources() {
         </div>
       )}
 
-      {showAddModal && (
-        <Modal onClose={() => setShowAddModal(false)}>
+      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Add Source">
           <form onSubmit={handleAddSource} className="space-y-4">
             <h2 className="text-xl font-bold">Add Source</h2>
             
@@ -240,8 +239,7 @@ export default function Sources() {
               <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 bg-gray-300 text-gray-800 rounded">Cancel</button>
             </div>
           </form>
-        </Modal>
-      )}
+      </Modal>
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
