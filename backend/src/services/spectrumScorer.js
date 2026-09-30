@@ -1,5 +1,6 @@
 const Anthropic = require('@anthropic-ai/sdk');
 const { supabase } = require('../config/supabase');
+const { analyzeTrend } = require('./broadwayAnalyzer');
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY
@@ -122,6 +123,11 @@ async function scoreTrend(trend, retries = 3) {
         if (trend.id) {
           await updateTrendScores(trend.id, result);
         }
+        
+        // Now run Broadway analysis on the trend
+        console.log(`[SPECTRUM] Starting Broadway analysis for "${trend.title.substring(0, 40)}"`);
+        const enrichedTrend = { ...trend, ...result };
+        await analyzeTrend(enrichedTrend);
         
         return result;
 

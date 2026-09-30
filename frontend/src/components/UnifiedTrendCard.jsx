@@ -7,8 +7,16 @@ const UnifiedTrendCard = ({ trend, onPickUp, isEditorial = false }) => {
   const description = trend.catalyst_summary || trend.description;
   const upvotes = trend.upvotes;
   const comments = trend.comments_count || 0;
-  const relevanceScore = trend.broadway_relevance_score || trend.score || 50;
-  const relevanceReason = trend.broadway_relevance_reason || `Score: ${relevanceScore}`;
+  // For editorial trends, calculate spectrum total; for micro-trends, use broadway_relevance_score
+  const totalSpectrumScore = (trend.velocity_score || 0) + 
+                            (trend.platform_score || 0) + 
+                            (trend.novelty_score || 0) +
+                            (trend.community_score || 0) +
+                            (trend.adoption_score || 0) +
+                            (trend.category_score || 0);
+  
+  const relevanceScore = trend.broadway_relevance_score || totalSpectrumScore || 50;
+  const relevanceReason = trend.broadway_relevance_reason || trend.spectrum_insight || `Score: ${relevanceScore}`;
   const categories = trend.relevant_broadway_categories || [trend.category] || ['general'];
   const sentiment = trend.sentiment || 'neutral';
   const confidence = trend.analysis_confidence || 75;
