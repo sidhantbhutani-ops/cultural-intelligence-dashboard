@@ -84,6 +84,15 @@ async function createSource(req, res, next) {
       [name, source_type, base_url, scrape_strategy, priority || 5, is_active !== false, api_key || null, description || '', userId]
     );
 
+    if (!result.rows || result.rows.length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        code: 'SOURCE_NOT_CREATED',
+        message: 'Failed to create source',
+        timestamp: new Date().toISOString(),
+      });
+    }
+
     res.status(201).json({
       status: 'success',
       code: 'SOURCE_CREATED',
@@ -91,6 +100,14 @@ async function createSource(req, res, next) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
+    if (error.message && error.message.includes('unique constraint')) {
+      return res.status(400).json({
+        status: 'error',
+        code: 'SOURCE_ALREADY_EXISTS',
+        message: 'A source with this name already exists',
+        timestamp: new Date().toISOString(),
+      });
+    }
     next(error);
   }
 }
