@@ -10,7 +10,7 @@ export default function Sources() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [toast, setToast] = useState(null);
+  
   
   const [newSource, setNewSource] = useState({
     name: '',
@@ -46,7 +46,7 @@ export default function Sources() {
     e.preventDefault();
     try {
       await api.post('/admin/sources', newSource);
-      setToast({ type: 'success', message: 'Source added successfully' });
+      Toast.success('Source added successfully');
       setShowAddModal(false);
       setNewSource({
         name: '',
@@ -60,7 +60,7 @@ export default function Sources() {
       });
       fetchSources();
     } catch (error) {
-      setToast({ type: 'error', message: 'Failed to add source' });
+      Toast.error('Failed to add source');
       console.error('Add source error:', error);
     }
   };
@@ -69,11 +69,11 @@ export default function Sources() {
     try {
       const sourceToUpdate = sources.find(s => s.id === id);
       await api.put(`/admin/sources/${id}`, sourceToUpdate);
-      setToast({ type: 'success', message: 'Source updated successfully' });
+      Toast.success('Source updated successfully');
       setEditingId(null);
       fetchSources();
     } catch (error) {
-      setToast({ type: 'error', message: 'Failed to update source' });
+      Toast.error('Failed to update source');
       console.error('Update source error:', error);
     }
   };
@@ -88,10 +88,10 @@ export default function Sources() {
           headers: { 'Authorization': `Bearer ${token}` },
         });
         if (!response.ok) throw new Error('Failed to delete');
-        setToast({ type: 'success', message: 'Source deleted' });
+        Toast.success('Source deleted');
         fetchSources();
       } catch (error) {
-        setToast({ type: 'error', message: 'Failed to delete source' });
+        Toast.error('Failed to delete source');
         console.error('Delete source error:', error);
       }
     }
@@ -241,7 +241,7 @@ export default function Sources() {
           </form>
       </Modal>
 
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      
     </div>
   );
 }
