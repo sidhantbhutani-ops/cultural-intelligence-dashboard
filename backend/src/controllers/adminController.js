@@ -45,20 +45,29 @@ async function getSources(req, res, next) {
 
 async function createSource(req, res, next) {
   try {
-    const { name, source_type, base_url, scrape_strategy, engagement_metric, rate_limit_per_hour, concurrent_requests, priority, description } = req.body;
+    const { name, source_type, base_url, scrape_strategy, priority, is_active, api_key, description } = req.body;
     const userId = req.user.email;
 
     // Validation
-    if (!name || name.length < 10 || name.length > 100) {
+    if (!name || name.trim().length === 0) {
       return res.status(400).json({
         status: 'error',
         code: 'VALIDATION_ERROR',
-        message: 'name must be between 10 and 100 characters',
+        message: 'name is required',
         timestamp: new Date().toISOString(),
       });
     }
 
-    const validTypes = ['instagram', 'twitter', 'reddit', 'tiktok', 'news', 'rss'];
+    if (!base_url || base_url.trim().length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        code: 'VALIDATION_ERROR',
+        message: 'base_url is required',
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    const validTypes = ['rss', 'news', 'html'];
     if (!validTypes.includes(source_type)) {
       return res.status(400).json({
         status: 'error',
@@ -69,10 +78,10 @@ async function createSource(req, res, next) {
     }
 
     const result = await db.query(
-      `INSERT INTO scraper_sources (name, source_type, base_url, scrape_strategy, engagement_metric, rate_limit_per_hour, concurrent_requests, priority, description, updated_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `INSERT INTO scraper_sources (name, source_type, base_url, scrape_strategy, priority, is_active, api_key, description, updated_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
-      [name, source_type, base_url, scrape_strategy, engagement_metric, rate_limit_per_hour, concurrent_requests, priority, description, userId]
+      [name, source_type, base_url, scrape_strategy, priority || 5, is_active !== false, api_key || null, description || '', userId]
     );
 
     res.status(201).json({
