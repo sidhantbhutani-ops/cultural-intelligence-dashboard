@@ -2,7 +2,7 @@
 const MOCK_POSTS = [
   {
     id: 'post_001',
-    subreddit: 'r/IndianMakeupAddicts',
+    subreddit: 'IndianMakeupAddicts',
     title: 'Niacinamide + seaweed combo changed my skin completely',
     url: 'https://reddit.com/r/IndianMakeupAddicts/comments/mock_001',
     author: 'skincare_junkie',
@@ -17,7 +17,7 @@ const MOCK_POSTS = [
   },
   {
     id: 'post_002',
-    subreddit: 'r/IndianFashion',
+    subreddit: 'IndianFashion',
     title: '80s aesthetic is having a major moment - here\'s why',
     url: 'https://reddit.com/r/IndianFashion/comments/mock_002',
     author: 'fashion_explorer',
@@ -32,7 +32,7 @@ const MOCK_POSTS = [
   },
   {
     id: 'post_003',
-    subreddit: 'r/Sneakers',
+    subreddit: 'Sneakers',
     title: 'Air Jordan collabs dropping next week - is anyone copping?',
     url: 'https://reddit.com/r/Sneakers/comments/mock_003',
     author: 'sneaker_head',
@@ -47,7 +47,7 @@ const MOCK_POSTS = [
   },
   {
     id: 'post_004',
-    subreddit: 'r/SkincareAddiction',
+    subreddit: 'SkincareAddiction',
     title: 'Blind box collectible skincare - genius or gimmick?',
     url: 'https://reddit.com/r/SkincareAddiction/comments/mock_004',
     author: 'skincare_critic',
@@ -62,31 +62,55 @@ const MOCK_POSTS = [
   }
 ];
 
-async function fetchReddit(config = {}) {
+/**
+ * Fetch Reddit posts from a specific subreddit
+ * @param {string} subreddit - Subreddit name (without r/)
+ * @param {number} limit - Number of posts to fetch
+ * @param {Object} config - Configuration options
+ * @returns {Promise<Array>} Array of formatted Reddit posts
+ */
+async function fetchRedditPosts(subreddit, limit = 5, config = {}) {
   const { useMockData = true, clientId, clientSecret, username, password } = config;
   
   if (useMockData) {
-    console.log('[Reddit Fetcher] Using mock data (waiting for API credentials)');
-    return MOCK_POSTS.map(post => ({
+    console.log(`    [Mock Data] Fetching from r/${subreddit}...`);
+    
+    // Filter mock posts by subreddit
+    const filtered = MOCK_POSTS.filter(
+      post => post.subreddit.toLowerCase() === subreddit.toLowerCase()
+    );
+
+    // If no exact match, return first 'limit' posts (for subreddits not in mock data)
+    const postsToReturn = filtered.length > 0 ? filtered : MOCK_POSTS.slice(0, limit);
+
+    return postsToReturn.slice(0, limit).map(post => ({
       title: post.title,
       description: post.selftext,
       url: post.url,
       source: 'reddit',
       subreddit: post.subreddit,
       post_id: post.id,
-      author: post.author,
+      post_title: post.title,
+      post_url: post.url,
+      post_author: post.author,
       posted_at: new Date(post.created_utc * 1000).toISOString(),
       upvotes: post.score,
       comments_count: post.num_comments,
-      top_comments: post.comments,
+      top_comments: post.comments || [],
+      mentioned_products: [],
+      mentioned_brands: [],
+      trend_drivers: [],
       engagement_score: post.score + (post.num_comments * 2)
     }));
   }
 
   // Real Reddit API (when credentials available)
-  console.log('[Reddit Fetcher] Using real Reddit API');
+  console.log(`    [Real API] Fetching from r/${subreddit}...`);
   // TODO: Implement real PRAW/Reddit API client here
   return [];
 }
 
-module.exports = { fetchReddit };
+module.exports = { 
+  fetchRedditPosts,
+  MOCK_POSTS
+};
