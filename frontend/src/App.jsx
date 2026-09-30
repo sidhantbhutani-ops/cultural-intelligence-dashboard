@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Login } from './pages/Login';
 import ActiveTrends from './pages/ActiveTrends';
+import TrendDetail from './pages/TrendDetail';
 import { Archive } from './pages/Archive';
 import { ScraperStatus } from './pages/ScraperStatus';
 import Sources from './pages/Sources';
@@ -33,6 +34,14 @@ export default function App() {
             <ProtectedRoute>
               <Nav />
               <ActiveTrends />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trends/:id"
+          element={
+            <ProtectedRoute>
+              <TrendDetail />
             </ProtectedRoute>
           }
         />
