@@ -18,13 +18,13 @@ const ActiveTrends = () => {
   const fetchTrends = async () => {
     setLoading(true);
     try {
-      // Fetch editorial trends
+      // Fetch editorial trends - CORRECT ENDPOINT
       const editorialRes = await fetch(
-        'https://cultural-intelligence-dashboard.onrender.com/api/editorial-trends'
+        'https://cultural-intelligence-dashboard.onrender.com/api/trends'
       );
       if (editorialRes.ok) {
         const editorialData = await editorialRes.json();
-        setEditorialTrends(editorialData.data?.trends || []);
+        setEditorialTrends(editorialData || []);
       }
 
       // Fetch micro trends
