@@ -35,10 +35,117 @@ const TrendDetail = () => {
     }
   };
 
-  const getRelevanceColor = (score) => {
-    if (score >= 70) return '#4CAF50';
-    if (score >= 40) return '#FF9800';
+  const getScoreColor = (score) => {
+    if (score >= 15) return '#4CAF50';
+    if (score >= 10) return '#FF9800';
     return '#F44336';
+  };
+
+  const renderSpectrum = () => {
+    const scores = [
+      { label: 'Rarity', value: trend.rare_score || 0 },
+      { label: 'Authenticity', value: trend.auth_score || 0 },
+      { label: 'Distinctiveness', value: trend.dis_score || 0 },
+      { label: 'Social', value: trend.social_score || 0 },
+      { label: 'Velocity', value: trend.velocity_score || 0 },
+      { label: 'Platform', value: trend.platform_score || 0 },
+      { label: 'Novelty', value: trend.novelty_score || 0 },
+      { label: 'Community', value: trend.community_score || 0 },
+    ];
+
+    return (
+      <div className="spectrum-grid">
+        {scores.map((score) => (
+          <div key={score.label} className="spectrum-item">
+            <div className="spectrum-bar">
+              <div 
+                className="spectrum-fill" 
+                style={{
+                  width: `${(score.value / 20) * 100}%`,
+                  backgroundColor: getScoreColor(score.value)
+                }}
+              />
+            </div>
+            <div className="spectrum-label">{score.label}</div>
+            <div className="spectrum-value">{score.value}</div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderBrandActivations = () => {
+    if (!trend.brand_activations) return null;
+    
+    const activations = Array.isArray(trend.brand_activations) 
+      ? trend.brand_activations 
+      : typeof trend.brand_activations === 'string'
+      ? JSON.parse(trend.brand_activations)
+      : [];
+
+    return (
+      <div className="activations-list">
+        {activations.map((activation, idx) => (
+          <div key={idx} className="activation-card">
+            <div className="activation-name">🎯 {activation.name}</div>
+            <div className="activation-reason">{activation.reason}</div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderActionMapping = () => {
+    if (!trend.action_mapping) return null;
+
+    const mapping = typeof trend.action_mapping === 'string'
+      ? JSON.parse(trend.action_mapping)
+      : trend.action_mapping;
+
+    return (
+      <div className="action-mapping-grid">
+        <div className="action-item">
+          <div className="action-icon">📱</div>
+          <div className="action-title">Content Idea</div>
+          <div className="action-text">{mapping.content_idea}</div>
+        </div>
+        <div className="action-item">
+          <div className="action-icon">🚀</div>
+          <div className="action-title">Product Launch</div>
+          <div className="action-text">{mapping.product_launch}</div>
+        </div>
+        <div className="action-item">
+          <div className="action-icon">🏪</div>
+          <div className="action-title">In-Store Activation</div>
+          <div className="action-text">{mapping.in_store_activation}</div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderConsumptionTriggers = () => {
+    if (!trend.consumption_triggers) return null;
+
+    const triggers = typeof trend.consumption_triggers === 'string'
+      ? JSON.parse(trend.consumption_triggers)
+      : trend.consumption_triggers;
+
+    return (
+      <div className="triggers-grid">
+        <div className="trigger-section">
+          <div className="trigger-title">How They Engage</div>
+          <p>{triggers.how}</p>
+        </div>
+        <div className="trigger-section">
+          <div className="trigger-title">When They Engage</div>
+          <p>{triggers.when}</p>
+        </div>
+        <div className="trigger-section">
+          <div className="trigger-title">Where They Engage</div>
+          <p>{triggers.where}</p>
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -62,8 +169,6 @@ const TrendDetail = () => {
     );
   }
 
-  const relevanceScore = trend.broadway_relevance_score || trend.score || 50;
-
   return (
     <>
       <Nav />
@@ -75,138 +180,101 @@ const TrendDetail = () => {
         <div className="detail-content">
           {/* Header */}
           <div className="detail-header">
-            <h1>{trend.title || trend.post_title}</h1>
+            <h1>{trend.title}</h1>
             <div className="detail-meta">
-              <span className="source-tag">{trend.source || 'Editorial'}</span>
+              <span className="source-tag">{trend.source}</span>
               <span className="date-tag">
                 {new Date(trend.created_at).toLocaleDateString()}
               </span>
             </div>
           </div>
 
-          {/* Main Grid */}
-          <div className="detail-grid">
-            {/* Left Column - Overview & Description */}
-            <div className="detail-column-left">
-              <section className="detail-section">
-                <h2>📋 Overview</h2>
-                <p className="overview-text">
-                  {trend.description || trend.catalyst_summary}
-                </p>
-              </section>
+          {/* Overview */}
+          <section className="detail-section">
+            <h2>📋 Overview</h2>
+            <p className="overview-text">{trend.description}</p>
+          </section>
 
-              {/* Sentiment & Engagement */}
-              <section className="detail-section">
-                <h2>📊 Community Engagement</h2>
-                <div className="engagement-grid">
-                  <div className="engagement-item">
-                    <span className="engagement-icon">👍</span>
-                    <div>
-                      <div className="engagement-value">{trend.upvotes || 0}</div>
-                      <div className="engagement-label">Upvotes</div>
-                    </div>
-                  </div>
-                  <div className="engagement-item">
-                    <span className="engagement-icon">💬</span>
-                    <div>
-                      <div className="engagement-value">{trend.comments_count || 0}</div>
-                      <div className="engagement-label">Comments</div>
-                    </div>
-                  </div>
-                  {trend.sentiment && (
-                    <div className="engagement-item">
-                      <span className="engagement-icon">
-                        {trend.sentiment === 'positive' && '😊'}
-                        {trend.sentiment === 'negative' && '😞'}
-                        {trend.sentiment === 'neutral' && '😐'}
-                        {trend.sentiment === 'mixed' && '🤔'}
-                      </span>
-                      <div>
-                        <div className="engagement-value" style={{ textTransform: 'capitalize' }}>
-                          {trend.sentiment}
-                        </div>
-                        <div className="engagement-label">Sentiment</div>
-                      </div>
-                    </div>
-                  )}
+          {/* Layer 1: SPECTRUM BREAKDOWN */}
+          <section className="detail-section">
+            <h2>📊 Spectrum Breakdown</h2>
+            <p className="section-desc">8-dimensional cultural impact analysis</p>
+            {renderSpectrum()}
+          </section>
+
+          {/* Layer 2: CLAUDE INSIGHT */}
+          {trend.spectrum_insight && (
+            <section className="detail-section insight-section">
+              <h2>🧠 Cultural Intelligence</h2>
+              <div className="insight-box">
+                <p>{trend.spectrum_insight}</p>
+              </div>
+            </section>
+          )}
+
+          {/* Layer 3: BRAND ACTIVATIONS */}
+          {trend.brand_activations && (
+            <section className="detail-section">
+              <h2>🎯 Brand Activations</h2>
+              <p className="section-desc">Which Broadway brands should move on this</p>
+              {renderBrandActivations()}
+            </section>
+          )}
+
+          {/* Layer 4: ACTION MAPPING */}
+          {trend.action_mapping && (
+            <section className="detail-section">
+              <h2>🎬 Executable Ideas</h2>
+              <p className="section-desc">Content, Product, and In-Store Activation</p>
+              {renderActionMapping()}
+            </section>
+          )}
+
+          {/* Layer 5: CONSUMPTION TRIGGERS */}
+          {trend.consumption_triggers && (
+            <section className="detail-section">
+              <h2>🎯 Consumption Triggers</h2>
+              <p className="section-desc">How, when, and where Gen-Z engages with this</p>
+              {renderConsumptionTriggers()}
+            </section>
+          )}
+
+          {/* Categories & Engagement */}
+          <section className="detail-section bottom-section">
+            <div className="bottom-grid">
+              {trend.category && (
+                <div className="bottom-item">
+                  <h3>Category</h3>
+                  <span className="category-badge">{trend.category}</span>
                 </div>
-              </section>
-
-              {/* Categories */}
-              {(trend.relevant_broadway_categories || trend.category) && (
-                <section className="detail-section">
-                  <h2>🏷️ Categories</h2>
-                  <div className="categories">
-                    {(trend.relevant_broadway_categories || [trend.category]).filter(Boolean).map(cat => (
-                      <span key={cat} className="category-badge">{cat}</span>
-                    ))}
-                  </div>
-                </section>
               )}
-            </div>
-
-            {/* Right Column - Analysis & Metrics */}
-            <div className="detail-column-right">
-              {/* Broadway Relevance Card */}
-              <div className="analysis-card relevance-card" style={{ borderColor: getRelevanceColor(relevanceScore) }}>
-                <div className="card-label">Broadway Relevance</div>
-                <div className="relevance-large" style={{ color: getRelevanceColor(relevanceScore) }}>
-                  {relevanceScore}%
-                </div>
-                <p className="card-description">
-                  {trend.broadway_relevance_reason || 'Community trend with engagement potential'}
-                </p>
-              </div>
-
-              {/* Analysis Confidence */}
-              <div className="analysis-card confidence-card">
-                <div className="card-label">Analysis Confidence</div>
-                <div className="confidence-large">{trend.analysis_confidence || 75}%</div>
-                <p className="card-description">
-                  {trend.analysis_confidence >= 80 ? 'High confidence assessment' : 'Moderate confidence assessment'}
-                </p>
-              </div>
-
-              {/* Quick Stats */}
-              <div className="analysis-card stats-card">
-                <div className="card-label">Quick Stats</div>
-                <div className="stats-list">
-                  <div className="stat-row">
-                    <span>Created</span>
-                    <strong>{new Date(trend.created_at).toLocaleDateString()}</strong>
-                  </div>
-                  {trend.updated_at && (
-                    <div className="stat-row">
-                      <span>Updated</span>
-                      <strong>{new Date(trend.updated_at).toLocaleDateString()}</strong>
-                    </div>
-                  )}
-                  <div className="stat-row">
-                    <span>Source</span>
-                    <strong>{trend.source || 'Editorial'}</strong>
-                  </div>
+              <div className="bottom-item">
+                <h3>Engagement</h3>
+                <div className="engagement-quick">
+                  <span>👍 {trend.engagement_metric || 0}</span>
+                  <span>📱 {trend.source}</span>
                 </div>
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* Action Section */}
+          {/* Action Buttons */}
           <div className="detail-actions">
-            {trend.post_url && (
+            {trend.source_url && (
               <a 
-                href={trend.post_url} 
+                href={trend.source_url} 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="action-btn primary"
               >
-                View Original Source →
+                View Source →
               </a>
             )}
             <button 
               className="action-btn secondary"
               onClick={() => navigate('/trends')}
             >
-              View All Trends
+              Back to All Trends
             </button>
           </div>
         </div>
