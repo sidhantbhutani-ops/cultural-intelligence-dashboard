@@ -13,7 +13,7 @@ const UnifiedTrendCard = ({ trend, onPickUp, isEditorial = false }) => {
   const sentiment = trend.sentiment || 'neutral';
   const confidence = trend.analysis_confidence || 75;
   const source = trend.subreddit || trend.source || 'Editorial';
-  const url = trend.post_url || '#';
+  const url = trend.post_url || (isEditorial ? `/trends/${trend.id}` : '#');
 
   const getRelevanceColor = (score) => {
     if (score >= 70) return '#4CAF50';
@@ -64,7 +64,7 @@ const UnifiedTrendCard = ({ trend, onPickUp, isEditorial = false }) => {
       )}
 
       <div className="card-footer">
-        <a href={url} target="_blank" rel="noopener noreferrer" className="view-link">
+        <a href={url} target={isEditorial ? '_self' : '_blank'} rel="noopener noreferrer" className="view-link">
           {isEditorial ? 'View Details' : 'View on Reddit'} →
         </a>
         <div className="confidence">

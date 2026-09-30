@@ -140,6 +140,7 @@
   padding-top: 12px;
   border-top: 1px solid #f0f0f0;
   margin-top: auto;
+  gap: 12px;
 }
 
 .view-link {
@@ -148,6 +149,7 @@
   font-size: 13px;
   font-weight: 500;
   transition: color 0.2s;
+  flex: 1;
 }
 
 .view-link:hover {
@@ -157,13 +159,12 @@
 .confidence {
   font-size: 11px;
   color: #999;
+  white-space: nowrap;
 }
 
 .pick-up-btn {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  padding: 6px 12px;
+  align-self: flex-end;
+  padding: 8px 14px;
   background: #007bff;
   color: white;
   border: none;
@@ -172,6 +173,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
+  margin-top: 8px;
 }
 
 .pick-up-btn:hover {
