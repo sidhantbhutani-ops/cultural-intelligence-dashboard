@@ -93,3 +93,7 @@ runMigrations().then(() => {
 });
 
 module.exports = app;
+
+// Micro-trends routes
+const microTrendsRoutes = require('./routes/microTrends');
+app.use('/api/micro-trends', microTrendsRoutes);
